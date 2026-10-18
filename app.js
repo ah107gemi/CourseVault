@@ -562,10 +562,22 @@ class CourseVaultApp {
       this.renderCourses();
     });
 
-    this.clearSearchBtn.addEventListener('click', () => {
+    this.searchInput.addEventListener('search', () => {
+      this.searchQuery = this.searchInput.value.trim().toLowerCase();
+      if (this.searchQuery) {
+        this.clearSearchBtn.classList.remove('hidden');
+      } else {
+        this.clearSearchBtn.classList.add('hidden');
+      }
+      this.renderCourses();
+    });
+
+    this.clearSearchBtn.addEventListener('click', (e) => {
+      e.preventDefault();
       this.searchInput.value = '';
       this.searchQuery = '';
       this.clearSearchBtn.classList.add('hidden');
+      this.searchInput.focus();
       this.renderCourses();
     });
 
