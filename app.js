@@ -9,6 +9,7 @@
 
 const STORAGE_KEY_COURSES = 'coursevault_courses_v1';
 const STORAGE_KEY_CATEGORIES = 'coursevault_categories_v1';
+const STORAGE_KEY_TOOLS = 'coursevault_tools_v1';
 
 const DEFAULT_CATEGORIES = [
   { id: 'cat-ccna', name: 'CCNA', color: '#6366f1' },
@@ -78,15 +79,62 @@ const DEFAULT_COURSES = [
   }
 ];
 
+const DEFAULT_TOOLS = [
+  {
+    id: 'tool-ilovepdf',
+    name: 'iLovePDF',
+    url: 'https://www.ilovepdf.com',
+    category: 'PDF',
+    description: 'Every tool you need to work with PDFs in one place: merge, split, compress, and convert.',
+    createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    id: 'tool-tinyurl',
+    name: 'TinyURL',
+    url: 'https://tinyurl.com',
+    category: 'Utility',
+    description: 'Fast link shortener that creates clean, memorable URLs with analytics.',
+    createdAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    id: 'tool-clippobot',
+    name: 'Clippobot',
+    url: 'https://clippobot.com',
+    category: 'Downloader',
+    description: 'Online media & video downloader and audio clipper without accounts or ads.',
+    createdAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    id: 'tool-removebg',
+    name: 'Remove.bg',
+    url: 'https://www.remove.bg',
+    category: 'Design',
+    description: 'Remove backgrounds from images automatically in 5 seconds with zero clicks.',
+    createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    id: 'tool-excalidraw',
+    name: 'Excalidraw',
+    url: 'https://excalidraw.com',
+    category: 'Productivity',
+    description: 'Virtual collaborative whiteboard tool that lets you sketch diagrams and architectures.',
+    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+  }
+];
+
 class CourseVaultApp {
   constructor() {
     this.courses = [];
     this.categories = [];
-    this.activeCategoryFilter = 'all'; // 'all' or category name
-    this.activeStatusFilter = 'all';   // 'all', 'Want to Learn', 'In Progress', 'Completed'
+    this.tools = [];
+    this.activeView = 'courses';        // 'courses' or 'tools'
+    this.activeToolCategory = 'all';    // 'all' or specific tool category
+    this.activeCategoryFilter = 'all';  // 'all' or category name
+    this.activeStatusFilter = 'all';    // 'all', 'Want to Learn', 'In Progress', 'Completed'
     this.searchQuery = '';
     this.sortOption = 'newest';
-    this.courseToDeleteId = null;
+    this.itemToDelete = null;           // { type: 'course'|'tool', id: string, title: string }
+    this.courseToDeleteId = null;       // backward compatibility
     this.deferredInstallPrompt = null;
 
     this.init();
@@ -102,6 +150,7 @@ class CourseVaultApp {
     this.setupEventListeners();
     this.setupPwa();
     this.render();
+    this.renderTools();
   }
 
   loadState() {
@@ -122,12 +171,21 @@ class CourseVaultApp {
         this.saveCourses();
       }
 
+      const storedTools = localStorage.getItem(STORAGE_KEY_TOOLS);
+      if (storedTools) {
+        this.tools = JSON.parse(storedTools);
+      } else {
+        this.tools = [...DEFAULT_TOOLS];
+        this.saveTools();
+      }
+
       // Heal & migrate all courses (extract video IDs and hqdefault thumbnails for existing cards)
       this.migrateExistingCourses();
     } catch (e) {
       console.error('Failed to parse localStorage data:', e);
       this.categories = [...DEFAULT_CATEGORIES];
       this.courses = [...DEFAULT_COURSES];
+      this.tools = [...DEFAULT_TOOLS];
     }
   }
 
@@ -184,6 +242,15 @@ class CourseVaultApp {
 
   saveCategories() {
     localStorage.setItem(STORAGE_KEY_CATEGORIES, JSON.stringify(this.categories));
+  }
+
+  saveTools() {
+    try {
+      localStorage.setItem(STORAGE_KEY_TOOLS, JSON.stringify(this.tools));
+    } catch (err) {
+      console.error('[CourseVault] Failed to save tools to localStorage:', err);
+      this.showToast('Could not save tools to browser storage.', 'danger');
+    }
   }
 
   // Setup Service Worker & PWA Install Prompts
@@ -452,11 +519,20 @@ class CourseVaultApp {
     this.searchInput = document.getElementById('searchInput');
     this.clearSearchBtn = document.getElementById('clearSearchBtn');
     this.openAddCourseModalBtn = document.getElementById('openAddCourseModalBtn');
+    this.headerAddText = document.getElementById('headerAddText');
     this.installPwaBtn = document.getElementById('installPwaBtn');
     this.backupModalBtn = document.getElementById('backupModalBtn');
 
+    // Primary View Switching
+    this.navAllCourses = document.getElementById('navAllCourses');
+    this.navTools = document.getElementById('navTools');
+    this.countTools = document.getElementById('countTools');
+    this.coursesViewPanel = document.getElementById('coursesViewPanel');
+    this.toolsViewPanel = document.getElementById('toolsViewPanel');
+
     // Mobile Bottom Bar
     this.mobileNavChannelsBtn = document.getElementById('mobileNavChannelsBtn');
+    this.mobileNavToolsBtn = document.getElementById('mobileNavToolsBtn');
     this.mobileFabAddBtn = document.getElementById('mobileFabAddBtn');
     this.mobileNavBackupBtn = document.getElementById('mobileNavBackupBtn');
 
@@ -470,7 +546,7 @@ class CourseVaultApp {
     this.sidebarAddCatBtn = document.getElementById('sidebarAddCatBtn');
     this.sidebarBackupBtn = document.getElementById('sidebarBackupBtn');
 
-    // Main Content
+    // Main Content (Courses)
     this.activeCategoryTitle = document.getElementById('activeCategoryTitle');
     this.activeFilterCount = document.getElementById('activeFilterCount');
     this.statusTabsContainer = document.getElementById('statusTabsContainer');
@@ -480,6 +556,15 @@ class CourseVaultApp {
     this.emptyDescription = document.getElementById('emptyDescription');
     this.emptyAddCourseBtn = document.getElementById('emptyAddCourseBtn');
     this.emptyResetFilterBtn = document.getElementById('emptyResetFilterBtn');
+
+    // Tools Dashboard Elements
+    this.toolsCountTag = document.getElementById('toolsCountTag');
+    this.openAddToolBtn = document.getElementById('openAddToolBtn');
+    this.toolsCategoryTabs = document.getElementById('toolsCategoryTabs');
+    this.toolsGrid = document.getElementById('toolsGrid');
+    this.toolsEmptyState = document.getElementById('toolsEmptyState');
+    this.toolsEmptyDescription = document.getElementById('toolsEmptyDescription');
+    this.toolsEmptyAddBtn = document.getElementById('toolsEmptyAddBtn');
 
     // Course Modal
     this.courseModalOverlay = document.getElementById('courseModalOverlay');
@@ -509,6 +594,20 @@ class CourseVaultApp {
     this.duplicateWarningAlert = document.getElementById('duplicateWarningAlert');
     this.duplicateWarningText = document.getElementById('duplicateWarningText');
 
+    // Tool Modal
+    this.toolModalOverlay = document.getElementById('toolModalOverlay');
+    this.closeToolModalBtn = document.getElementById('closeToolModalBtn');
+    this.cancelToolBtn = document.getElementById('cancelToolBtn');
+    this.toolForm = document.getElementById('toolForm');
+    this.toolModalTitle = document.getElementById('toolModalTitle');
+    this.toolEditId = document.getElementById('toolEditId');
+    this.toolNameInput = document.getElementById('toolNameInput');
+    this.toolUrlInput = document.getElementById('toolUrlInput');
+    this.toolCategoryInput = document.getElementById('toolCategoryInput');
+    this.toolQuickCategoryChips = document.getElementById('toolQuickCategoryChips');
+    this.toolDescriptionInput = document.getElementById('toolDescriptionInput');
+    this.saveToolBtnText = document.getElementById('saveToolBtnText');
+
     // Category Modal
     this.categoryModalOverlay = document.getElementById('categoryModalOverlay');
     this.closeCategoryModalBtn = document.getElementById('closeCategoryModalBtn');
@@ -528,6 +627,8 @@ class CourseVaultApp {
 
     // Delete Modal
     this.deleteConfirmModal = document.getElementById('deleteConfirmModal');
+    this.deleteModalTitle = document.getElementById('deleteModalTitle');
+    this.deleteItemTitle = document.getElementById('deleteItemTitle');
     this.deleteCourseTitle = document.getElementById('deleteCourseTitle');
     this.cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
     this.confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
@@ -548,37 +649,60 @@ class CourseVaultApp {
     };
 
     if (this.mobileMenuBtn) this.mobileMenuBtn.addEventListener('click', toggleDrawer);
-    if (this.mobileNavChannelsBtn) this.mobileNavChannelsBtn.addEventListener('click', toggleDrawer);
+    if (this.mobileNavChannelsBtn) {
+      this.mobileNavChannelsBtn.addEventListener('click', () => {
+        this.switchView('courses');
+      });
+    }
+    if (this.mobileNavToolsBtn) {
+      this.mobileNavToolsBtn.addEventListener('click', () => {
+        this.switchView('tools');
+      });
+    }
     if (this.drawerBackdrop) this.drawerBackdrop.addEventListener('click', () => this.closeDrawer());
 
-    // Search Input
-    this.searchInput.addEventListener('input', (e) => {
-      this.searchQuery = e.target.value.trim().toLowerCase();
-      if (this.searchQuery) {
-        this.clearSearchBtn.classList.remove('hidden');
-      } else {
-        this.clearSearchBtn.classList.add('hidden');
-      }
-      this.renderCourses();
-    });
+    // Primary View Switching (Sidebar)
+    if (this.navAllCourses) {
+      this.navAllCourses.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.activeCategoryFilter = 'all';
+        this.activeStatusFilter = 'all';
+        this.switchView('courses');
+        this.closeDrawer();
+      });
+    }
 
-    this.searchInput.addEventListener('search', () => {
-      this.searchQuery = this.searchInput.value.trim().toLowerCase();
+    if (this.navTools) {
+      this.navTools.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.switchView('tools');
+        this.closeDrawer();
+      });
+    }
+
+    // Search Input
+    const executeSearch = (val) => {
+      this.searchQuery = val.trim().toLowerCase();
       if (this.searchQuery) {
         this.clearSearchBtn.classList.remove('hidden');
       } else {
         this.clearSearchBtn.classList.add('hidden');
       }
-      this.renderCourses();
-    });
+      if (this.activeView === 'tools') {
+        this.renderTools();
+      } else {
+        this.renderCourses();
+      }
+    };
+
+    this.searchInput.addEventListener('input', (e) => executeSearch(e.target.value));
+    this.searchInput.addEventListener('search', () => executeSearch(this.searchInput.value));
 
     this.clearSearchBtn.addEventListener('click', (e) => {
       e.preventDefault();
       this.searchInput.value = '';
-      this.searchQuery = '';
-      this.clearSearchBtn.classList.add('hidden');
+      executeSearch('');
       this.searchInput.focus();
-      this.renderCourses();
     });
 
     // PWA Install Button
@@ -594,14 +718,49 @@ class CourseVaultApp {
       });
     }
 
-    // Modal Triggers: Add Course
-    const openAddCourse = () => this.openCourseModal();
-    if (this.openAddCourseModalBtn) this.openAddCourseModalBtn.addEventListener('click', openAddCourse);
-    if (this.mobileFabAddBtn) this.mobileFabAddBtn.addEventListener('click', openAddCourse);
-    if (this.emptyAddCourseBtn) this.emptyAddCourseBtn.addEventListener('click', openAddCourse);
+    // Modal Triggers: Add Course or Tool (Context-Aware)
+    const handleAddItem = () => {
+      if (this.activeView === 'tools') {
+        this.openToolModal();
+      } else {
+        this.openCourseModal();
+      }
+    };
+    if (this.openAddCourseModalBtn) this.openAddCourseModalBtn.addEventListener('click', handleAddItem);
+    if (this.mobileFabAddBtn) this.mobileFabAddBtn.addEventListener('click', handleAddItem);
+    if (this.emptyAddCourseBtn) this.emptyAddCourseBtn.addEventListener('click', () => this.openCourseModal());
+    if (this.openAddToolBtn) this.openAddToolBtn.addEventListener('click', () => this.openToolModal());
+    if (this.toolsEmptyAddBtn) this.toolsEmptyAddBtn.addEventListener('click', () => this.openToolModal());
 
     this.closeCourseModalBtn.addEventListener('click', () => this.closeCourseModal());
     this.cancelCourseBtn.addEventListener('click', () => this.closeCourseModal());
+
+    // Tool Modal Actions
+    if (this.closeToolModalBtn) this.closeToolModalBtn.addEventListener('click', () => this.closeToolModal());
+    if (this.cancelToolBtn) this.cancelToolBtn.addEventListener('click', () => this.closeToolModal());
+    if (this.toolForm) this.toolForm.addEventListener('submit', (e) => this.handleToolSubmit(e));
+
+    // Tool Modal Quick Category Chips
+    if (this.toolQuickCategoryChips) {
+      this.toolQuickCategoryChips.addEventListener('click', (e) => {
+        const chip = e.target.closest('.chip-item');
+        if (chip && chip.dataset.fillCat && this.toolCategoryInput) {
+          this.toolCategoryInput.value = chip.dataset.fillCat;
+        }
+      });
+    }
+
+    // Tools Category Filter Tabs
+    if (this.toolsCategoryTabs) {
+      this.toolsCategoryTabs.addEventListener('click', (e) => {
+        const tab = e.target.closest('.tools-tab');
+        if (!tab) return;
+        this.toolsCategoryTabs.querySelectorAll('.tools-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        this.activeToolCategory = tab.dataset.toolCategory || 'all';
+        this.renderTools();
+      });
+    }
 
     // Modal Triggers: New Category
     const openAddCat = () => this.openCategoryModal();
@@ -757,11 +916,17 @@ class CourseVaultApp {
 
       if (channelBtn.dataset.category) {
         this.activeCategoryFilter = channelBtn.dataset.category;
+        if (this.activeView !== 'courses') {
+          this.switchView('courses');
+        }
       } else if (channelBtn.dataset.statusFilter) {
         this.activeStatusFilter = channelBtn.dataset.statusFilter;
         this.statusTabsContainer.querySelectorAll('.status-tab').forEach(t => {
           t.classList.toggle('active', t.dataset.tabStatus === this.activeStatusFilter);
         });
+        if (this.activeView !== 'courses') {
+          this.switchView('courses');
+        }
       }
 
       this.closeDrawer();
@@ -1019,29 +1184,83 @@ class CourseVaultApp {
     this.showToast(`Status updated to "${newStatus}"`, 'info');
   }
 
-  confirmDelete(courseId) {
-    const course = this.courses.find(c => c.id === courseId);
-    if (!course) return;
+  switchView(viewName) {
+    this.activeView = viewName;
+    if (viewName === 'tools') {
+      if (this.coursesViewPanel) this.coursesViewPanel.classList.add('hidden');
+      if (this.toolsViewPanel) this.toolsViewPanel.classList.remove('hidden');
+      if (this.navAllCourses) this.navAllCourses.classList.remove('active');
+      if (this.navTools) this.navTools.classList.add('active');
+      if (this.mobileNavChannelsBtn) this.mobileNavChannelsBtn.classList.remove('active');
+      if (this.mobileNavToolsBtn) this.mobileNavToolsBtn.classList.add('active');
+      if (this.headerAddText) this.headerAddText.textContent = 'Add Tool';
+      if (this.searchInput) this.searchInput.placeholder = 'Search tools, tags, URLs...';
+      this.renderTools();
+    } else {
+      if (this.coursesViewPanel) this.coursesViewPanel.classList.remove('hidden');
+      if (this.toolsViewPanel) this.toolsViewPanel.classList.add('hidden');
+      if (this.navAllCourses) this.navAllCourses.classList.add('active');
+      if (this.navTools) this.navTools.classList.remove('active');
+      if (this.mobileNavChannelsBtn) this.mobileNavChannelsBtn.classList.add('active');
+      if (this.mobileNavToolsBtn) this.mobileNavToolsBtn.classList.remove('active');
+      if (this.headerAddText) this.headerAddText.textContent = 'Add Course';
+      if (this.searchInput) this.searchInput.placeholder = 'Search courses, tags...';
+      this.render();
+    }
+    this.renderCounts();
+  }
 
-    this.courseToDeleteId = courseId;
-    this.deleteCourseTitle.textContent = `"${course.title}"`;
+  confirmDeleteItem(type, id, title) {
+    this.itemToDelete = { type, id, title };
+    this.courseToDeleteId = (type === 'course') ? id : null;
+    const itemTitleEl = this.deleteItemTitle || this.deleteCourseTitle;
+    if (itemTitleEl) itemTitleEl.textContent = `"${title}"`;
+    if (this.deleteModalTitle) {
+      this.deleteModalTitle.textContent = type === 'tool' ? 'Delete Web Tool?' : 'Delete Course?';
+    }
     this.deleteConfirmModal.classList.remove('hidden');
   }
 
+  confirmDelete(courseId) {
+    const course = this.courses.find(c => c.id === courseId);
+    if (!course) return;
+    this.confirmDeleteItem('course', course.id, course.title);
+  }
+
+  confirmDeleteTool(toolId) {
+    const tool = this.tools.find(t => t.id === toolId);
+    if (!tool) return;
+    this.confirmDeleteItem('tool', tool.id, tool.name);
+  }
+
   closeDeleteModal() {
+    this.itemToDelete = null;
     this.courseToDeleteId = null;
     this.deleteConfirmModal.classList.add('hidden');
   }
 
   handleConfirmDelete() {
-    if (!this.courseToDeleteId) return;
+    if (!this.itemToDelete && !this.courseToDeleteId) return;
 
-    const idx = this.courses.findIndex(c => c.id === this.courseToDeleteId);
-    if (idx !== -1) {
-      const removed = this.courses.splice(idx, 1)[0];
-      this.saveCourses();
-      this.render();
-      this.showToast(`Deleted "${removed.title}"`, 'info');
+    const item = this.itemToDelete || { type: 'course', id: this.courseToDeleteId };
+
+    if (item.type === 'tool') {
+      const idx = this.tools.findIndex(t => t.id === item.id);
+      if (idx !== -1) {
+        const removed = this.tools.splice(idx, 1)[0];
+        this.saveTools();
+        this.renderTools();
+        this.renderCounts();
+        this.showToast(`Deleted tool "${removed.name}"`, 'info');
+      }
+    } else {
+      const idx = this.courses.findIndex(c => c.id === item.id);
+      if (idx !== -1) {
+        const removed = this.courses.splice(idx, 1)[0];
+        this.saveCourses();
+        this.render();
+        this.showToast(`Deleted "${removed.title}"`, 'info');
+      }
     }
     this.closeDeleteModal();
   }
@@ -1209,10 +1428,11 @@ class CourseVaultApp {
   exportBackupJson() {
     const backupData = {
       app: 'CourseVault',
-      version: '1.0.0',
+      version: '1.1.0',
       exportedAt: new Date().toISOString(),
       categories: this.categories,
-      courses: this.courses
+      courses: this.courses,
+      tools: this.tools
     };
 
     const jsonString = JSON.stringify(backupData, null, 2);
@@ -1253,6 +1473,7 @@ class CourseVaultApp {
 
         let newCategoriesCount = 0;
         let newCoursesCount = 0;
+        let newToolsCount = 0;
 
         // Merge Categories
         if (Array.isArray(data.categories)) {
@@ -1300,10 +1521,34 @@ class CourseVaultApp {
           }
         });
 
+        // Merge Tools
+        if (Array.isArray(data.tools)) {
+          data.tools.forEach(importedTool => {
+            if (!importedTool.name || !importedTool.url) return;
+            const cleanUrl = importedTool.url.trim().toLowerCase();
+            const duplicate = this.tools.find(t => (t.url || '').trim().toLowerCase() === cleanUrl);
+            if (!duplicate) {
+              this.tools.push({
+                id: importedTool.id || ('tool-' + Date.now() + Math.random()),
+                name: importedTool.name,
+                url: importedTool.url,
+                category: importedTool.category || 'Utility',
+                description: importedTool.description || '',
+                createdAt: importedTool.createdAt || new Date().toISOString()
+              });
+              newToolsCount++;
+            }
+          });
+          this.saveTools();
+        }
+
         this.saveCourses();
         this.render();
+        this.renderTools();
 
-        const msg = `Success! Restored ${newCoursesCount} courses & ${newCategoriesCount} new categories.`;
+        let msg = `Success! Restored ${newCoursesCount} courses, ${newCategoriesCount} categories`;
+        if (newToolsCount > 0) msg += ` & ${newToolsCount} tools`;
+        msg += '.';
         this.showImportFeedback(msg, 'success');
         this.showToast(msg, 'success');
       } catch (err) {
@@ -1319,6 +1564,207 @@ class CourseVaultApp {
     this.importFeedback.textContent = text;
     this.importFeedback.className = `import-feedback ${type}`;
     this.importFeedback.classList.remove('hidden');
+  }
+
+  // ==========================================================================
+  // Tools & Web Utilities CRUD Engine
+  // ==========================================================================
+
+  openToolModal(editTool = null) {
+    if (editTool) {
+      if (this.toolModalTitle) this.toolModalTitle.textContent = 'Edit Web Tool';
+      if (this.saveToolBtnText) this.saveToolBtnText.textContent = 'Save Changes';
+      if (this.toolEditId) this.toolEditId.value = editTool.id;
+      if (this.toolNameInput) this.toolNameInput.value = editTool.name;
+      if (this.toolUrlInput) this.toolUrlInput.value = editTool.url;
+      if (this.toolCategoryInput) this.toolCategoryInput.value = editTool.category || 'Utility';
+      if (this.toolDescriptionInput) this.toolDescriptionInput.value = editTool.description || '';
+    } else {
+      if (this.toolModalTitle) this.toolModalTitle.textContent = 'Add Web Tool / Utility';
+      if (this.saveToolBtnText) this.saveToolBtnText.textContent = 'Save Tool';
+      if (this.toolEditId) this.toolEditId.value = '';
+      if (this.toolForm) this.toolForm.reset();
+      if (this.toolCategoryInput && this.activeToolCategory !== 'all') {
+        this.toolCategoryInput.value = this.activeToolCategory;
+      }
+    }
+    if (this.toolModalOverlay) this.toolModalOverlay.classList.remove('hidden');
+    setTimeout(() => {
+      if (this.toolNameInput) this.toolNameInput.focus();
+    }, 100);
+  }
+
+  closeToolModal() {
+    if (this.toolModalOverlay) this.toolModalOverlay.classList.add('hidden');
+    if (this.toolForm) this.toolForm.reset();
+  }
+
+  handleToolSubmit(e) {
+    e.preventDefault();
+    const name = this.toolNameInput ? this.toolNameInput.value.trim() : '';
+    let url = this.toolUrlInput ? this.toolUrlInput.value.trim() : '';
+    const category = (this.toolCategoryInput ? this.toolCategoryInput.value.trim() : '') || 'Utility';
+    const description = this.toolDescriptionInput ? this.toolDescriptionInput.value.trim() : '';
+    const editId = this.toolEditId ? this.toolEditId.value : '';
+
+    if (!name || !url) {
+      this.showToast('Please provide both Tool Name and URL.', 'warning');
+      return;
+    }
+
+    if (!/^https?:\/\//i.test(url)) {
+      url = 'https://' + url;
+    }
+
+    if (editId) {
+      const tool = this.tools.find(t => t.id === editId);
+      if (tool) {
+        tool.name = name;
+        tool.url = url;
+        tool.category = category;
+        tool.description = description;
+        this.saveTools();
+        this.showToast(`Updated "${name}"`, 'success');
+      }
+    } else {
+      const newTool = {
+        id: 'tool-' + Date.now(),
+        name: name,
+        url: url,
+        category: category,
+        description: description,
+        createdAt: new Date().toISOString()
+      };
+      this.tools.unshift(newTool);
+      this.saveTools();
+      this.showToast(`Added "${name}" to Tools`, 'success');
+    }
+
+    this.closeToolModal();
+    this.renderTools();
+    this.renderCounts();
+  }
+
+  renderTools() {
+    if (!this.toolsGrid) return;
+
+    let filtered = [...this.tools];
+
+    // Filter by Category Tab
+    if (this.activeToolCategory !== 'all') {
+      filtered = filtered.filter(t => (t.category || '').toLowerCase() === this.activeToolCategory.toLowerCase());
+    }
+
+    // Filter by Search Query
+    if (this.searchQuery) {
+      filtered = filtered.filter(t => {
+        const nameMatch = (t.name || '').toLowerCase().includes(this.searchQuery);
+        const catMatch = (t.category || '').toLowerCase().includes(this.searchQuery);
+        const descMatch = (t.description || '').toLowerCase().includes(this.searchQuery);
+        const urlMatch = (t.url || '').toLowerCase().includes(this.searchQuery);
+        return nameMatch || catMatch || descMatch || urlMatch;
+      });
+    }
+
+    // Sort alphabetically by name
+    filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+    if (this.toolsCountTag) {
+      this.toolsCountTag.textContent = `${filtered.length} ${filtered.length === 1 ? 'tool' : 'tools'}`;
+    }
+
+    if (filtered.length === 0) {
+      this.toolsGrid.innerHTML = '';
+      if (this.toolsEmptyState) {
+        this.toolsEmptyState.classList.remove('hidden');
+        if (this.toolsEmptyDescription) {
+          if (this.searchQuery) {
+            this.toolsEmptyDescription.textContent = `No tools found matching "${this.searchQuery}".`;
+          } else if (this.activeToolCategory !== 'all') {
+            this.toolsEmptyDescription.textContent = `No tools in category "${this.activeToolCategory}".`;
+          } else {
+            this.toolsEmptyDescription.textContent = 'No tools saved yet. Add your favorite web utilities!';
+          }
+        }
+      }
+      return;
+    }
+
+    if (this.toolsEmptyState) this.toolsEmptyState.classList.add('hidden');
+    this.toolsGrid.innerHTML = '';
+
+    filtered.forEach(tool => {
+      const card = this.createToolCardElement(tool);
+      this.toolsGrid.appendChild(card);
+    });
+  }
+
+  createToolCardElement(tool) {
+    const card = document.createElement('div');
+    card.className = 'tool-card';
+    card.dataset.id = tool.id;
+
+    let domain = '';
+    try {
+      domain = new URL(tool.url).hostname.replace(/^www\./, '');
+    } catch (e) {
+      domain = tool.url;
+    }
+
+    const initials = (tool.name || 'WT').substring(0, 2).toUpperCase();
+    const faviconUrl = domain ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64` : '';
+
+    card.innerHTML = `
+      <div class="tool-card-header">
+        <div class="tool-avatar-wrap">
+          ${faviconUrl ? `<img class="tool-avatar-img" src="${escapeHtml(faviconUrl)}" alt="${escapeHtml(tool.name)}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');">` : ''}
+          <div class="tool-avatar-fallback ${faviconUrl ? 'hidden' : ''}">
+            ${escapeHtml(initials)}
+          </div>
+        </div>
+        <div class="tool-card-meta">
+          <h3 class="tool-card-title" title="${escapeHtml(tool.name)}">${escapeHtml(tool.name)}</h3>
+          <div class="tool-card-domain">${escapeHtml(domain)}</div>
+          <span class="tool-category-badge">${escapeHtml(tool.category || 'Utility')}</span>
+        </div>
+      </div>
+
+      <p class="tool-description">${escapeHtml(tool.description || 'Quick online tool & web utility.')}</p>
+
+      <div class="tool-card-footer">
+        <a href="${escapeHtml(tool.url)}" target="_blank" rel="noopener noreferrer" class="btn-tool-launch">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <line x1="10" y1="14" x2="21" y2="3"></line>
+          </svg>
+          <span>Open Tool</span>
+        </a>
+
+        <div class="tool-actions-group">
+          <button class="tool-icon-btn btn-edit" title="Edit tool" aria-label="Edit tool">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+          </button>
+          <button class="tool-icon-btn btn-delete" title="Delete tool" aria-label="Delete tool">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          </button>
+        </div>
+      </div>
+    `;
+
+    // Edit listener
+    const editBtn = card.querySelector('.btn-edit');
+    if (editBtn) {
+      editBtn.addEventListener('click', () => this.openToolModal(tool));
+    }
+
+    // Delete listener
+    const deleteBtn = card.querySelector('.btn-delete');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', () => this.confirmDeleteTool(tool.id));
+    }
+
+    return card;
   }
 
   // ==========================================================================
@@ -1374,6 +1820,7 @@ class CourseVaultApp {
     if (this.countWant) this.countWant.textContent = wantCount;
     if (this.countProgress) this.countProgress.textContent = progressCount;
     if (this.countCompleted) this.countCompleted.textContent = completedCount;
+    if (this.countTools) this.countTools.textContent = this.tools.length;
   }
 
   renderCourses() {
