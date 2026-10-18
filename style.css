@@ -1750,6 +1750,38 @@ button {
   border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
+.backup-box-subtle {
+  background-color: rgba(255, 255, 255, 0.02);
+  border: 1px dashed var(--border-medium);
+}
+
+.backup-box-icon.icon-purple {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+}
+
+.backup-actions-row {
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.backup-actions-row .btn {
+  flex: 1;
+  min-width: 140px;
+}
+
+.btn-outline-danger {
+  color: #f87171 !important;
+  border-color: rgba(239, 68, 68, 0.35) !important;
+  background-color: rgba(239, 68, 68, 0.06) !important;
+}
+
+.btn-outline-danger:hover {
+  background-color: rgba(239, 68, 68, 0.18) !important;
+  color: #fca5a5 !important;
+}
+
 /* ==========================================================================
    Toast Notifications
    ========================================================================== */

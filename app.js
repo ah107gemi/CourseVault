@@ -12,17 +12,17 @@ const STORAGE_KEY_CATEGORIES = 'coursevault_categories_v1';
 const STORAGE_KEY_TOOLS = 'coursevault_tools_v1';
 
 const DEFAULT_CATEGORIES = [
-  { id: 'cat-ccna', name: 'CCNA', color: '#6366f1' },
+  { id: 'cat-general', name: 'General', color: '#6366f1' },
   { id: 'cat-python', name: 'Python', color: '#10b981' },
-  { id: 'cat-sql', name: 'SQL', color: '#06b6d4' },
-  { id: 'cat-powerbi', name: 'Power BI', color: '#f59e0b' },
-  { id: 'cat-ai', name: 'AI Automation', color: '#ec4899' },
-  { id: 'cat-webdev', name: 'Web Dev', color: '#8b5cf6' }
+  { id: 'cat-webdev', name: 'Web Dev', color: '#06b6d4' },
+  { id: 'cat-ai', name: 'AI & Data', color: '#ec4899' },
+  { id: 'cat-design', name: 'Design', color: '#f59e0b' }
 ];
 
-const DEFAULT_COURSES = [
+// Optional demo/starter pack: can be loaded on demand via Backup/Restore modal
+const SAMPLE_COURSES = [
   {
-    id: 'course-1',
+    id: 'sample-course-1',
     title: 'Free CCNA 200-301 Complete Course - Day 1 to Day 60',
     url: 'https://www.youtube.com/playlist?list=PLxbwE86Cz83-cgvEt-p_0dJ8c_4jXgXmZ',
     normalizedUrl: 'https://www.youtube.com/playlist?list=PLxbwE86Cz83-cgvEt-p_0dJ8c_4jXgXmZ',
@@ -30,13 +30,13 @@ const DEFAULT_COURSES = [
     playlistId: 'PLxbwE86Cz83-cgvEt-p_0dJ8c_4jXgXmZ',
     thumbnailUrl: '',
     customThumbnailUrl: '',
-    category: 'CCNA',
+    category: 'General',
     status: 'In Progress',
     notes: 'Jeremy\'s IT Lab. Complete 200-301 syllabus with packet tracer labs and Anki flashcards.',
-    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
+    createdAt: new Date().toISOString()
   },
   {
-    id: 'course-2',
+    id: 'sample-course-2',
     title: 'Python for Beginners – Full Course [Programming with Mosh]',
     url: 'https://www.youtube.com/watch?v=_uQrJ0TkZlc',
     normalizedUrl: 'https://www.youtube.com/watch?v=_uQrJ0TkZlc',
@@ -47,24 +47,10 @@ const DEFAULT_COURSES = [
     category: 'Python',
     status: 'Completed',
     notes: 'Great 6-hour foundations on variables, loops, classes, and PyCharm setup.',
-    createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
+    createdAt: new Date().toISOString()
   },
   {
-    id: 'course-3',
-    title: 'SQL Tutorial - Full Database Course for Beginners',
-    url: 'https://www.youtube.com/watch?v=HXV3zeQKqGY',
-    normalizedUrl: 'https://www.youtube.com/watch?v=HXV3zeQKqGY',
-    videoId: 'HXV3zeQKqGY',
-    playlistId: null,
-    thumbnailUrl: 'https://img.youtube.com/vi/HXV3zeQKqGY/hqdefault.jpg',
-    customThumbnailUrl: '',
-    category: 'SQL',
-    status: 'Want to Learn',
-    notes: 'freeCodeCamp course covering schema design, joins, aggregations, and MySQL.',
-    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
-  },
-  {
-    id: 'course-4',
+    id: 'sample-course-3',
     title: 'Build Autonomous AI Agents with LangChain & Python',
     url: 'https://www.youtube.com/watch?v=aywZrzNaKjs',
     normalizedUrl: 'https://www.youtube.com/watch?v=aywZrzNaKjs',
@@ -72,53 +58,53 @@ const DEFAULT_COURSES = [
     playlistId: null,
     thumbnailUrl: 'https://img.youtube.com/vi/aywZrzNaKjs/hqdefault.jpg',
     customThumbnailUrl: '',
-    category: 'AI Automation',
+    category: 'AI & Data',
     status: 'Want to Learn',
     notes: 'Multi-agent systems, function calling, and local LLM orchestration.',
-    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
+    createdAt: new Date().toISOString()
   }
 ];
 
-const DEFAULT_TOOLS = [
+const SAMPLE_TOOLS = [
   {
-    id: 'tool-ilovepdf',
+    id: 'sample-tool-1',
     name: 'iLovePDF',
     url: 'https://www.ilovepdf.com',
     category: 'PDF',
     description: 'Every tool you need to work with PDFs in one place: merge, split, compress, and convert.',
-    createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString()
+    createdAt: new Date().toISOString()
   },
   {
-    id: 'tool-tinyurl',
+    id: 'sample-tool-2',
     name: 'TinyURL',
     url: 'https://tinyurl.com',
     category: 'Utility',
     description: 'Fast link shortener that creates clean, memorable URLs with analytics.',
-    createdAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString()
+    createdAt: new Date().toISOString()
   },
   {
-    id: 'tool-clippobot',
+    id: 'sample-tool-3',
     name: 'Clippobot',
     url: 'https://clippobot.com',
     category: 'Downloader',
     description: 'Online media & video downloader and audio clipper without accounts or ads.',
-    createdAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString()
+    createdAt: new Date().toISOString()
   },
   {
-    id: 'tool-removebg',
+    id: 'sample-tool-4',
     name: 'Remove.bg',
     url: 'https://www.remove.bg',
     category: 'Design',
     description: 'Remove backgrounds from images automatically in 5 seconds with zero clicks.',
-    createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString()
+    createdAt: new Date().toISOString()
   },
   {
-    id: 'tool-excalidraw',
+    id: 'sample-tool-5',
     name: 'Excalidraw',
     url: 'https://excalidraw.com',
     category: 'Productivity',
     description: 'Virtual collaborative whiteboard tool that lets you sketch diagrams and architectures.',
-    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+    createdAt: new Date().toISOString()
   }
 ];
 
@@ -167,7 +153,8 @@ class CourseVaultApp {
       if (storedCourses) {
         this.courses = JSON.parse(storedCourses);
       } else {
-        this.courses = [...DEFAULT_COURSES];
+        // First-time visitor: start with clean personalized workspace
+        this.courses = [];
         this.saveCourses();
       }
 
@@ -175,17 +162,18 @@ class CourseVaultApp {
       if (storedTools) {
         this.tools = JSON.parse(storedTools);
       } else {
-        this.tools = [...DEFAULT_TOOLS];
+        // First-time visitor: start with clean personalized workspace
+        this.tools = [];
         this.saveTools();
       }
 
-      // Heal & migrate all courses (extract video IDs and hqdefault thumbnails for existing cards)
+      // Heal & migrate any existing courses if present
       this.migrateExistingCourses();
     } catch (e) {
       console.error('Failed to parse localStorage data:', e);
       this.categories = [...DEFAULT_CATEGORIES];
-      this.courses = [...DEFAULT_COURSES];
-      this.tools = [...DEFAULT_TOOLS];
+      this.courses = [];
+      this.tools = [];
     }
   }
 
@@ -553,6 +541,7 @@ class CourseVaultApp {
     this.sortSelect = document.getElementById('sortSelect');
     this.coursesGrid = document.getElementById('coursesGrid');
     this.emptyState = document.getElementById('emptyState');
+    this.emptyTitle = document.getElementById('emptyTitle');
     this.emptyDescription = document.getElementById('emptyDescription');
     this.emptyAddCourseBtn = document.getElementById('emptyAddCourseBtn');
     this.emptyResetFilterBtn = document.getElementById('emptyResetFilterBtn');
@@ -563,8 +552,10 @@ class CourseVaultApp {
     this.toolsCategoryTabs = document.getElementById('toolsCategoryTabs');
     this.toolsGrid = document.getElementById('toolsGrid');
     this.toolsEmptyState = document.getElementById('toolsEmptyState');
+    this.toolsEmptyTitle = document.getElementById('toolsEmptyTitle');
     this.toolsEmptyDescription = document.getElementById('toolsEmptyDescription');
     this.toolsEmptyAddBtn = document.getElementById('toolsEmptyAddBtn');
+    this.toolsResetFilterBtn = document.getElementById('toolsResetFilterBtn');
 
     // Course Modal
     this.courseModalOverlay = document.getElementById('courseModalOverlay');
@@ -624,6 +615,8 @@ class CourseVaultApp {
     this.importDropzone = document.getElementById('importDropzone');
     this.importFileInput = document.getElementById('importFileInput');
     this.importFeedback = document.getElementById('importFeedback');
+    this.loadSampleDataBtn = document.getElementById('loadSampleDataBtn');
+    this.clearAllDataBtn = document.getElementById('clearAllDataBtn');
 
     // Delete Modal
     this.deleteConfirmModal = document.getElementById('deleteConfirmModal');
@@ -957,6 +950,27 @@ class CourseVaultApp {
         this.processImportJson(e.dataTransfer.files[0]);
       }
     });
+
+    // Sample Demo & Clear Data Handlers
+    if (this.loadSampleDataBtn) {
+      this.loadSampleDataBtn.addEventListener('click', () => this.loadSampleData());
+    }
+    if (this.clearAllDataBtn) {
+      this.clearAllDataBtn.addEventListener('click', () => this.clearAllData());
+    }
+
+    // Tools Reset Filter Button from Empty State
+    if (this.toolsResetFilterBtn) {
+      this.toolsResetFilterBtn.addEventListener('click', () => {
+        this.activeToolCategory = 'all';
+        if (this.toolsCategoryTabs) {
+          this.toolsCategoryTabs.querySelectorAll('.tools-tab').forEach(t => {
+            t.classList.toggle('active', t.dataset.toolCategory === 'all');
+          });
+        }
+        this.renderTools();
+      });
+    }
   }
 
   openDrawer() {
@@ -1566,6 +1580,46 @@ class CourseVaultApp {
     this.importFeedback.classList.remove('hidden');
   }
 
+  loadSampleData() {
+    let coursesAdded = 0;
+    SAMPLE_COURSES.forEach(sc => {
+      const exists = this.courses.some(c => c.normalizedUrl.toLowerCase() === sc.normalizedUrl.toLowerCase());
+      if (!exists) {
+        this.courses.push({ ...sc });
+        coursesAdded++;
+      }
+    });
+
+    let toolsAdded = 0;
+    SAMPLE_TOOLS.forEach(st => {
+      const exists = this.tools.some(t => t.url.toLowerCase() === st.url.toLowerCase());
+      if (!exists) {
+        this.tools.push({ ...st });
+        toolsAdded++;
+      }
+    });
+
+    this.saveCourses();
+    this.saveTools();
+    this.render();
+    this.renderTools();
+    this.closeBackupModal();
+    this.showToast(`Loaded ${coursesAdded} demo courses & ${toolsAdded} demo web tools!`, 'success');
+  }
+
+  clearAllData() {
+    if (confirm('Are you sure you want to clear all saved courses and web tools on this device? (This cannot be undone without a JSON backup)')) {
+      this.courses = [];
+      this.tools = [];
+      this.saveCourses();
+      this.saveTools();
+      this.render();
+      this.renderTools();
+      this.closeBackupModal();
+      this.showToast('Workspace reset to clean state.', 'info');
+    }
+  }
+
   // ==========================================================================
   // Tools & Web Utilities CRUD Engine
   // ==========================================================================
@@ -1679,11 +1733,17 @@ class CourseVaultApp {
         this.toolsEmptyState.classList.remove('hidden');
         if (this.toolsEmptyDescription) {
           if (this.searchQuery) {
+            if (this.toolsEmptyTitle) this.toolsEmptyTitle.textContent = 'No Tools Found';
             this.toolsEmptyDescription.textContent = `No tools found matching "${this.searchQuery}".`;
+            if (this.toolsResetFilterBtn) this.toolsResetFilterBtn.classList.remove('hidden');
           } else if (this.activeToolCategory !== 'all') {
+            if (this.toolsEmptyTitle) this.toolsEmptyTitle.textContent = 'No Tools Found';
             this.toolsEmptyDescription.textContent = `No tools in category "${this.activeToolCategory}".`;
+            if (this.toolsResetFilterBtn) this.toolsResetFilterBtn.classList.remove('hidden');
           } else {
-            this.toolsEmptyDescription.textContent = 'No tools saved yet. Add your favorite web utilities!';
+            if (this.toolsEmptyTitle) this.toolsEmptyTitle.textContent = 'No Web Tools Saved Yet';
+            this.toolsEmptyDescription.textContent = "No web tools saved yet. Tap '+ Add Tool' to get started!";
+            if (this.toolsResetFilterBtn) this.toolsResetFilterBtn.classList.add('hidden');
           }
         }
       }
@@ -1871,13 +1931,16 @@ class CourseVaultApp {
       this.emptyState.classList.remove('hidden');
 
       if (this.searchQuery) {
+        if (this.emptyTitle) this.emptyTitle.textContent = 'No Courses Found';
         this.emptyDescription.textContent = `No courses found matching "${this.searchQuery}".`;
         this.emptyResetFilterBtn.classList.remove('hidden');
       } else if (this.activeCategoryFilter !== 'all' || this.activeStatusFilter !== 'all') {
+        if (this.emptyTitle) this.emptyTitle.textContent = 'No Courses Found';
         this.emptyDescription.textContent = `No courses in "${this.activeCategoryFilter}" with status "${this.activeStatusFilter}".`;
         this.emptyResetFilterBtn.classList.remove('hidden');
       } else {
-        this.emptyDescription.textContent = 'Your CourseVault is currently empty. Add your first course link!';
+        if (this.emptyTitle) this.emptyTitle.textContent = 'No Courses Added Yet';
+        this.emptyDescription.textContent = "No courses added yet. Tap '+ Add Course' to get started!";
         this.emptyResetFilterBtn.classList.add('hidden');
       }
       return;

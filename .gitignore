@@ -10,3 +10,7 @@ __pycache__/
 # Local dev server & temporary notes
 server.py
 *.log
+
+# Personal local data backups
+full data project backed up/
+coursevault-backup-*.json
