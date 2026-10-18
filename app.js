@@ -170,7 +170,16 @@ class CourseVaultApp {
   }
 
   saveCourses() {
-    localStorage.setItem(STORAGE_KEY_COURSES, JSON.stringify(this.courses));
+    try {
+      localStorage.setItem(STORAGE_KEY_COURSES, JSON.stringify(this.courses));
+    } catch (err) {
+      console.error('[CourseVault] Failed to save courses to localStorage:', err);
+      if (err.name === 'QuotaExceededError' || err.code === 22) {
+        this.showToast('Storage quota reached! Delete unused courses or large custom covers.', 'danger');
+      } else {
+        this.showToast('Could not save data to browser storage.', 'danger');
+      }
+    }
   }
 
   saveCategories() {
@@ -278,6 +287,71 @@ class CourseVaultApp {
     }
 
     return { url: null, isCustom: false };
+  }
+
+  /**
+   * Reads and compresses a local image file using an offscreen HTML canvas.
+   * Scales image down to maxWidth (~640px) proportionally and outputs a base64 JPEG string at quality ~0.7.
+   * @param {File} file - Selected image file (.jpg, .png, .webp)
+   * @param {number} maxWidth - Maximum width in pixels (default: 640)
+   * @param {number} quality - JPEG compression quality (default: 0.7)
+   * @returns {Promise<string>} Base64 data URL
+   */
+  compressImageFile(file, maxWidth = 640, quality = 0.7) {
+    return new Promise((resolve, reject) => {
+      if (!file || !file.type.startsWith('image/')) {
+        return reject(new Error('Selected file is not an image'));
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          let width = img.width;
+          let height = img.height;
+
+          // Proportionally constrain to maxWidth (~640px)
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d');
+          // Fill background for transparency safety in dark theme
+          ctx.fillStyle = '#0b0f17';
+          ctx.fillRect(0, 0, width, height);
+          ctx.drawImage(img, 0, 0, width, height);
+
+          try {
+            const dataUrl = canvas.toDataURL('image/jpeg', quality);
+            resolve(dataUrl);
+          } catch (err) {
+            reject(err);
+          }
+        };
+        img.onerror = () => reject(new Error('Failed to parse image data'));
+        img.src = e.target.result;
+      };
+      reader.onerror = () => reject(new Error('Failed to read file from device'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  /**
+   * Resets local file upload state for cover image
+   */
+  clearUploadedFileCover() {
+    if (this.courseCoverFileInput) this.courseCoverFileInput.value = '';
+    if (this.fileBadgeInfo) this.fileBadgeInfo.classList.add('hidden');
+    if (this.coverUploadBtnText) this.coverUploadBtnText.textContent = 'Upload Cover Image from Device';
+    if (this.courseThumbnailInput && this.courseThumbnailInput.value.startsWith('data:image/')) {
+      this.courseThumbnailInput.value = '';
+    }
+    this.updateThumbnailPreview();
   }
 
   /**
@@ -419,6 +493,12 @@ class CourseVaultApp {
     this.courseCategorySelect = document.getElementById('courseCategorySelect');
     this.courseNotesInput = document.getElementById('courseNotesInput');
     this.courseThumbnailInput = document.getElementById('courseThumbnailInput');
+    this.courseCoverFileInput = document.getElementById('courseCoverFileInput');
+    this.courseCoverFileLabel = document.getElementById('courseCoverFileLabel');
+    this.coverUploadBtnText = document.getElementById('coverUploadBtnText');
+    this.fileBadgeInfo = document.getElementById('fileBadgeInfo');
+    this.fileBadgeText = document.getElementById('fileBadgeText');
+    this.removeFileCoverBtn = document.getElementById('removeFileCoverBtn');
     this.thumbPreviewImg = document.getElementById('thumbPreviewImg');
     this.thumbPreviewFallback = document.getElementById('thumbPreviewFallback');
     this.thumbPreviewStatus = document.getElementById('thumbPreviewStatus');
@@ -537,15 +617,89 @@ class CourseVaultApp {
     this.courseUrlInput.addEventListener('input', handleUrlChange);
     this.courseUrlInput.addEventListener('paste', () => setTimeout(handleUrlChange, 50));
 
+    // Custom Cover URL Input Listener
     if (this.courseThumbnailInput) {
-      this.courseThumbnailInput.addEventListener('input', () => this.updateThumbnailPreview());
-      this.courseThumbnailInput.addEventListener('paste', () => setTimeout(() => this.updateThumbnailPreview(), 50));
+      const handleCustomUrlChange = () => {
+        const val = this.courseThumbnailInput.value.trim();
+        // If user typed/pasted a regular web URL, reset any local file upload state
+        if (val && !val.startsWith('data:image/')) {
+          if (this.courseCoverFileInput) this.courseCoverFileInput.value = '';
+          if (this.fileBadgeInfo) this.fileBadgeInfo.classList.add('hidden');
+          if (this.coverUploadBtnText) this.coverUploadBtnText.textContent = 'Upload Cover Image from Device';
+        }
+        this.updateThumbnailPreview();
+      };
+      this.courseThumbnailInput.addEventListener('input', handleCustomUrlChange);
+      this.courseThumbnailInput.addEventListener('paste', () => setTimeout(handleCustomUrlChange, 50));
     }
 
+    // Local Device File Upload Listener (FileReader + Offscreen Canvas Compression)
+    if (this.courseCoverFileInput) {
+      this.courseCoverFileInput.addEventListener('change', async (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+
+        // Verify valid image MIME type or extension
+        if (!file.type.match(/^image\/(jpeg|png|webp|jpg)$/i) && !file.name.match(/\.(jpe?g|png|webp)$/i)) {
+          this.showToast('Please select a valid image file (.jpg, .png, .webp).', 'warning');
+          this.courseCoverFileInput.value = '';
+          return;
+        }
+
+        try {
+          if (this.coverUploadBtnText) this.coverUploadBtnText.textContent = 'Optimizing image...';
+          
+          // Compress using offscreen HTML canvas (max width 640px, JPEG quality 0.7)
+          const compressedBase64 = await this.compressImageFile(file, 640, 0.7);
+
+          // Populate the custom thumbnail field with Base64 data URL
+          if (this.courseThumbnailInput) {
+            this.courseThumbnailInput.value = compressedBase64;
+          }
+
+          // Compute size details for user confirmation
+          const originalKb = Math.round(file.size / 1024);
+          const compressedKb = Math.round((compressedBase64.length * 3 / 4) / 1024);
+
+          // Update UI badge
+          if (this.fileBadgeText) {
+            this.fileBadgeText.textContent = `${file.name} (~${compressedKb} KB)`;
+          }
+          if (this.fileBadgeInfo) {
+            this.fileBadgeInfo.classList.remove('hidden');
+          }
+          if (this.coverUploadBtnText) {
+            this.coverUploadBtnText.textContent = 'Change Uploaded Image';
+          }
+
+          // Live thumbnail preview updates immediately
+          this.updateThumbnailPreview();
+          this.showToast(`Cover loaded & compressed (${originalKb} KB → ~${compressedKb} KB)`, 'success');
+        } catch (err) {
+          console.error('[CourseVault] File upload conversion failed:', err);
+          this.showToast('Could not process this image file.', 'danger');
+          if (this.coverUploadBtnText) {
+            this.coverUploadBtnText.textContent = 'Upload Cover Image from Device';
+          }
+        }
+      });
+    }
+
+    // Remove uploaded file cover button
+    if (this.removeFileCoverBtn) {
+      this.removeFileCoverBtn.addEventListener('click', () => {
+        this.clearUploadedFileCover();
+        this.showToast('Removed uploaded image cover', 'info');
+      });
+    }
+
+    // Reset Custom Cover to Auto YouTube Thumbnail
     if (this.clearCustomCoverBtn) {
       this.clearCustomCoverBtn.addEventListener('click', () => {
+        this.clearUploadedFileCover();
         if (this.courseThumbnailInput) this.courseThumbnailInput.value = '';
         this.updateThumbnailPreview();
+        this.showToast('Reset to automatic YouTube thumbnail', 'info');
       });
     }
 
@@ -688,7 +842,8 @@ class CourseVaultApp {
       this.thumbPreviewImg.classList.remove('hidden');
       this.thumbPreviewFallback.classList.add('hidden');
       if (this.thumbPreviewStatus) {
-        this.thumbPreviewStatus.textContent = 'Custom Cover Image Active';
+        const isDeviceUpload = customThumb.startsWith('data:image/');
+        this.thumbPreviewStatus.textContent = isDeviceUpload ? 'Device Upload Cover Active' : 'Custom Cover URL Active';
         this.thumbPreviewStatus.style.color = '#38bdf8';
       }
       this.thumbPreviewImg.onerror = () => {
@@ -901,6 +1056,20 @@ class CourseVaultApp {
       if (this.courseThumbnailInput) {
         this.courseThumbnailInput.value = editCourse.customThumbnailUrl || '';
       }
+      if (this.courseCoverFileInput) {
+        this.courseCoverFileInput.value = '';
+      }
+
+      // Check if attached cover is an uploaded Base64 image
+      const existingThumb = (editCourse.customThumbnailUrl || '').trim();
+      if (existingThumb.startsWith('data:image/')) {
+        if (this.fileBadgeText) this.fileBadgeText.textContent = 'Device image currently attached';
+        if (this.fileBadgeInfo) this.fileBadgeInfo.classList.remove('hidden');
+        if (this.coverUploadBtnText) this.coverUploadBtnText.textContent = 'Replace Image from Device';
+      } else {
+        if (this.fileBadgeInfo) this.fileBadgeInfo.classList.add('hidden');
+        if (this.coverUploadBtnText) this.coverUploadBtnText.textContent = 'Upload Cover Image from Device';
+      }
       
       const radio = this.courseForm.querySelector(`input[name="courseStatus"][value="${editCourse.status}"]`);
       if (radio) radio.checked = true;
@@ -916,6 +1085,15 @@ class CourseVaultApp {
       this.courseForm.reset();
       if (this.courseThumbnailInput) {
         this.courseThumbnailInput.value = '';
+      }
+      if (this.courseCoverFileInput) {
+        this.courseCoverFileInput.value = '';
+      }
+      if (this.fileBadgeInfo) {
+        this.fileBadgeInfo.classList.add('hidden');
+      }
+      if (this.coverUploadBtnText) {
+        this.coverUploadBtnText.textContent = 'Upload Cover Image from Device';
       }
       
       // Default to currently selected category filter if specific
@@ -943,6 +1121,9 @@ class CourseVaultApp {
   closeCourseModal() {
     this.courseModalOverlay.classList.add('hidden');
     this.duplicateWarningAlert.classList.add('hidden');
+    if (this.courseCoverFileInput) this.courseCoverFileInput.value = '';
+    if (this.fileBadgeInfo) this.fileBadgeInfo.classList.add('hidden');
+    if (this.coverUploadBtnText) this.coverUploadBtnText.textContent = 'Upload Cover Image from Device';
   }
 
   // ==========================================================================

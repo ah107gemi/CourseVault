@@ -37,8 +37,9 @@ self.addEventListener('activate', (event) => {
 
 // Fetch: Stale-While-Revalidate for app assets, Network-first with cache for YouTube thumbnails
 self.addEventListener('fetch', (event) => {
-  // Only handle GET requests and local/http schemes
+  // Only handle GET requests and http/https schemes
   if (event.request.method !== 'GET') return;
+  if (!event.request.url.startsWith('http:') && !event.request.url.startsWith('https:')) return;
   const url = new URL(event.request.url);
 
   // If requesting YouTube images or external media
