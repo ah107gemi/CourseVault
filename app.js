@@ -648,8 +648,7 @@ class CourseVaultApp {
     this.openAddWorkspaceBtn = document.getElementById('openAddWorkspaceBtn');
 
     // Mobile Bottom Bar
-    this.mobileNavChannelsBtn = document.getElementById('mobileNavChannelsBtn');
-    this.mobileNavToolsBtn = document.getElementById('mobileNavToolsBtn');
+    this.bottomNavMenuBtn = document.getElementById('bottomNavMenuBtn');
     this.mobileFabAddBtn = document.getElementById('mobileFabAddBtn');
     this.mobileNavBackupBtn = document.getElementById('mobileNavBackupBtn');
 
@@ -825,19 +824,8 @@ class CourseVaultApp {
     };
 
     if (this.mobileMenuBtn) this.mobileMenuBtn.addEventListener('click', toggleDrawer);
+    if (this.bottomNavMenuBtn) this.bottomNavMenuBtn.addEventListener('click', toggleDrawer);
     if (this.drawerBackdrop) this.drawerBackdrop.addEventListener('click', () => this.closeDrawer());
-
-    // Mobile Bottom Navigation
-    if (this.mobileNavChannelsBtn) {
-      this.mobileNavChannelsBtn.addEventListener('click', () => {
-        this.switchWorkspace('courses');
-      });
-    }
-    if (this.mobileNavToolsBtn) {
-      this.mobileNavToolsBtn.addEventListener('click', () => {
-        this.switchWorkspace('tools');
-      });
-    }
 
     // View Mode Switcher
     if (this.viewModeSwitcher) {
@@ -1607,16 +1595,12 @@ class CourseVaultApp {
     if (sectionId === 'tools') {
       if (this.coursesViewPanel) this.coursesViewPanel.classList.add('hidden');
       if (this.toolsViewPanel) this.toolsViewPanel.classList.remove('hidden');
-      if (this.mobileNavChannelsBtn) this.mobileNavChannelsBtn.classList.remove('active');
-      if (this.mobileNavToolsBtn) this.mobileNavToolsBtn.classList.add('active');
       if (this.headerAddText) this.headerAddText.textContent = 'Add Tool';
       if (this.searchInput) this.searchInput.placeholder = 'Search tools, tags, URLs...';
       this.renderTools();
     } else {
       if (this.coursesViewPanel) this.coursesViewPanel.classList.remove('hidden');
       if (this.toolsViewPanel) this.toolsViewPanel.classList.add('hidden');
-      if (this.mobileNavChannelsBtn) this.mobileNavChannelsBtn.classList.add('active');
-      if (this.mobileNavToolsBtn) this.mobileNavToolsBtn.classList.remove('active');
       if (this.headerAddText) this.headerAddText.textContent = `Add to ${curSection.shortName}`;
       if (this.searchInput) this.searchInput.placeholder = `Search in ${curSection.shortName}...`;
       if (this.activeCategoryTitle) this.activeCategoryTitle.textContent = curSection.title;

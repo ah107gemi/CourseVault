@@ -2203,6 +2203,7 @@ button {
   margin-top: 0.75rem;
   margin-bottom: 0.25rem;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .btn-manage-curriculum-prominent {
@@ -2210,7 +2211,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.8rem 1rem;
+  padding: 0.75rem 1rem;
   background-color: #13171F;
   border: 1px solid rgba(212, 175, 55, 0.4);
   border-radius: var(--radius-sm);
@@ -2221,6 +2222,9 @@ button {
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
   box-sizing: border-box;
+  overflow: hidden;
+  gap: 0.75rem;
+  max-width: 100%;
 }
 
 .btn-manage-curriculum-prominent:hover {
@@ -2239,16 +2243,23 @@ button {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
 }
 
 .curriculum-book-icon {
   font-size: 1.1rem;
   line-height: 1;
+  flex-shrink: 0;
 }
 
 .curriculum-btn-text {
   font-weight: 600;
   letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .curriculum-badge-pill {
@@ -2257,9 +2268,12 @@ button {
   background: rgba(212, 175, 55, 0.14);
   color: var(--accent-gold-light);
   border: 1px solid rgba(212, 175, 55, 0.3);
-  padding: 2px 8px;
+  padding: 3px 9px;
   border-radius: 999px;
   font-weight: 600;
+  flex-shrink: 0;
+  white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .lecture-modal-body {
@@ -3116,22 +3130,107 @@ button {
 }
 
 /* ==========================================================================
-   Responsive Breakpoints
+   Responsive Architecture & Layout Separation
    ========================================================================== */
 
-@media (max-width: 900px) {
+/* PC / Desktop View Only (Viewport > 768px) */
+@media (min-width: 769px) {
+  .mobile-bottom-bar {
+    display: none !important;
+  }
+
+  .mobile-menu-btn {
+    display: none !important;
+  }
+
+  .drawer-backdrop {
+    display: none !important;
+  }
+
+  .app-body {
+    display: flex !important;
+    flex-direction: row !important;
+    width: 100% !important;
+    height: calc(100vh - var(--header-height));
+    overflow: hidden !important;
+  }
+
+  .sidebar-channels {
+    position: static !important;
+    transform: none !important;
+    box-shadow: none !important;
+    display: flex !important;
+    width: var(--sidebar-width) !important;
+    min-width: var(--sidebar-width) !important;
+    max-width: var(--sidebar-width) !important;
+    height: 100% !important;
+    overflow-y: auto !important;
+    border-right: 1px solid var(--border-subtle) !important;
+    flex-shrink: 0 !important;
+  }
+
+  .main-content {
+    flex: 1 1 auto !important;
+    width: calc(100% - var(--sidebar-width)) !important;
+    min-width: 0 !important;
+    height: 100% !important;
+    overflow-y: auto !important;
+    padding: 1.75rem 2rem !important;
+    box-sizing: border-box !important;
+  }
+
+  .view-panel {
+    width: 100%;
+    min-width: 0;
+  }
+
   .courses-grid {
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)) !important;
+    gap: 1.25rem !important;
+    width: 100% !important;
+  }
+
+  .tools-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)) !important;
+    gap: 1.25rem !important;
+    width: 100% !important;
+  }
+
+  .courses-grid.view-mode-compact {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)) !important;
+    gap: 0.85rem !important;
+  }
+
+  .courses-grid.view-mode-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.65rem !important;
+    width: 100% !important;
   }
 }
 
+@media (max-width: 900px) and (min-width: 769px) {
+  .courses-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+  }
+}
+
+/* Mobile View Only (Viewport <= 768px) */
 @media (max-width: 768px) {
+  /* Top Header: Hide add button and hamburger (moved to bottom bar) */
+  .header-actions .header-add-btn,
+  #openAddCourseModalBtn {
+    display: none !important;
+  }
+
   .mobile-menu-btn {
-    display: flex;
+    display: none !important;
   }
 
   .desktop-only {
-    display: none;
+    display: none !important;
   }
 
   /* Off-canvas sidebar */
@@ -3175,7 +3274,7 @@ button {
 
   /* Bottom Navigation Bar for Mobile */
   .mobile-bottom-bar {
-    display: flex;
+    display: flex !important;
     align-items: center;
     justify-content: space-around;
     position: fixed;
@@ -3202,25 +3301,34 @@ button {
     flex: 1;
     height: 100%;
     transition: color 0.15s;
+    background: transparent;
+    border: none;
+    cursor: pointer;
   }
 
-  .bottom-nav-item:hover, .bottom-nav-item.active {
-    color: var(--accent-primary);
+  .bottom-nav-item:hover, .bottom-nav-item:active, .bottom-nav-item.active {
+    color: var(--accent-gold);
   }
 
   .bottom-fab {
-    width: 50px;
-    height: 50px;
+    width: 52px;
+    height: 52px;
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--accent-primary), #4f46e5);
-    color: #ffffff;
+    background: linear-gradient(135deg, var(--accent-gold), #b8972e);
+    color: #0B0D11;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 14px var(--accent-primary-glow);
+    box-shadow: 0 4px 16px rgba(212, 175, 55, 0.45);
     margin-top: -18px;
     border: 3px solid var(--bg-surface);
-    transition: transform 0.15s;
+    transition: transform 0.15s, box-shadow 0.15s;
+    cursor: pointer;
+  }
+
+  .bottom-fab:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(212, 175, 55, 0.6);
   }
 
   .bottom-fab:active {
@@ -3669,8 +3777,9 @@ input[type="search"]::-webkit-search-results-decoration {
 /* Tools Cards Grid */
 .tools-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(285px, 1fr));
-  gap: 1.1rem;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.25rem;
+  width: 100%;
 }
 
 /* Tool Card */
