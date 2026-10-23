@@ -195,6 +195,8 @@ class CourseVaultApp {
     this.courseToDeleteId = null;
     this.deferredInstallPrompt = null;
     this.expandedLecturesCourseIds = new Set();
+    this.activeEditingCourseId = null;
+    this.activeEditingLectures = [];
 
     this.init();
   }
@@ -717,6 +719,23 @@ class CourseVaultApp {
     this.duplicateWarningAlert = document.getElementById('duplicateWarningAlert');
     this.duplicateWarningText = document.getElementById('duplicateWarningText');
 
+    // Dedicated Lecture Modal Elements
+    this.openLectureModalBtn = document.getElementById('openLectureModalBtn');
+    this.lectureCountBadge = document.getElementById('lectureCountBadge');
+    this.lectureModalOverlay = document.getElementById('lectureModalOverlay');
+    this.closeLectureModalBtn = document.getElementById('closeLectureModalBtn');
+    this.saveAndCloseLectureModalBtn = document.getElementById('saveAndCloseLectureModalBtn');
+    this.lectureModalTitle = document.getElementById('lectureModalTitle');
+    this.lectureModalSubtitle = document.getElementById('lectureModalSubtitle');
+    this.batchLectureCountInput = document.getElementById('batchLectureCountInput');
+    this.batchGenerateLecturesBtn = document.getElementById('batchGenerateLecturesBtn');
+    this.lectureModalStats = document.getElementById('lectureModalStats');
+    this.lectureModalList = document.getElementById('lectureModalList');
+    this.lectureModalAddForm = document.getElementById('lectureModalAddForm');
+    this.newLectureTitle = document.getElementById('newLectureTitle');
+    this.newLectureLink = document.getElementById('newLectureLink');
+    this.newLectureNotes = document.getElementById('newLectureNotes');
+
     // Tool Modal
     this.toolModalOverlay = document.getElementById('toolModalOverlay');
     this.closeToolModalBtn = document.getElementById('closeToolModalBtn');
@@ -819,7 +838,10 @@ class CourseVaultApp {
 
     // Workspaces
     if (this.openAddWorkspaceBtn) {
-      this.openAddWorkspaceBtn.addEventListener('click', () => this.openWorkspaceModal());
+      this.openAddWorkspaceBtn.addEventListener('click', () => {
+        this.closeDrawer();
+        this.openWorkspaceModal();
+      });
     }
     if (this.closeWorkspaceModalBtn) {
       this.closeWorkspaceModalBtn.addEventListener('click', () => this.closeWorkspaceModal());
@@ -836,7 +858,10 @@ class CourseVaultApp {
 
     // Manage Categories
     if (this.openManageCategoriesBtn) {
-      this.openManageCategoriesBtn.addEventListener('click', () => this.openManageCategoriesModal());
+      this.openManageCategoriesBtn.addEventListener('click', () => {
+        this.closeDrawer();
+        this.openManageCategoriesModal();
+      });
     }
     if (this.closeManageCategoriesModalBtn) {
       this.closeManageCategoriesModalBtn.addEventListener('click', () => this.closeManageCategoriesModal());
@@ -846,6 +871,23 @@ class CourseVaultApp {
     }
     if (this.inlineCategoryForm) {
       this.inlineCategoryForm.addEventListener('submit', (e) => this.handleInlineCategorySubmit(e));
+    }
+
+    // Dedicated Lecture Modal
+    if (this.openLectureModalBtn) {
+      this.openLectureModalBtn.addEventListener('click', () => this.openLectureModal());
+    }
+    if (this.closeLectureModalBtn) {
+      this.closeLectureModalBtn.addEventListener('click', () => this.closeLectureModal());
+    }
+    if (this.saveAndCloseLectureModalBtn) {
+      this.saveAndCloseLectureModalBtn.addEventListener('click', () => this.saveAndCloseLectureModal());
+    }
+    if (this.batchGenerateLecturesBtn) {
+      this.batchGenerateLecturesBtn.addEventListener('click', () => this.handleBatchGenerateLectures());
+    }
+    if (this.lectureModalAddForm) {
+      this.lectureModalAddForm.addEventListener('submit', (e) => this.handleSingleLectureAdd(e));
     }
 
     // Search
@@ -923,7 +965,10 @@ class CourseVaultApp {
     }
 
     // New Category Modal
-    const openAddCat = () => this.openCategoryModal();
+    const openAddCat = () => {
+      this.closeDrawer();
+      this.openCategoryModal();
+    };
     if (this.inlineAddCategoryBtn) this.inlineAddCategoryBtn.addEventListener('click', openAddCat);
     if (this.sidebarAddCatBtn) this.sidebarAddCatBtn.addEventListener('click', openAddCat);
     if (this.inlineAddCategoryTriggerBtn) this.inlineAddCategoryTriggerBtn.addEventListener('click', openAddCat);
@@ -932,7 +977,10 @@ class CourseVaultApp {
     if (this.categoryForm) this.categoryForm.addEventListener('submit', (e) => this.handleCategorySubmit(e));
 
     // Backup & Restore
-    const openBackup = () => this.openBackupModal();
+    const openBackup = () => {
+      this.closeDrawer();
+      this.openBackupModal();
+    };
     if (this.backupModalBtn) this.backupModalBtn.addEventListener('click', openBackup);
     if (this.mobileNavBackupBtn) this.mobileNavBackupBtn.addEventListener('click', openBackup);
     if (this.sidebarBackupBtn) this.sidebarBackupBtn.addEventListener('click', openBackup);
@@ -1133,14 +1181,31 @@ class CourseVaultApp {
         <span class="workspace-icon">${getWorkspaceIconSvg(sec.icon || 'folder', 16)}</span>
         <span class="workspace-name">${escapeHtml(sec.shortName || sec.title)}</span>
         <span class="badge ${sec.id === 'tools' ? 'badge-tools' : ''}">${count}</span>
-        ${!sec.isDefault ? `<span class="workspace-actions"><button type="button" class="workspace-action-btn edit-sec" title="Edit Workspace"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg></button></span>` : ''}
+        <span class="workspace-actions">
+          <button type="button" class="workspace-action-btn edit-sec" title="Edit Workspace" aria-label="Edit workspace">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+          </button>
+          ${!sec.isDefault ? `
+            <button type="button" class="workspace-action-btn delete-sec" title="Delete Workspace" aria-label="Delete workspace">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
+          ` : ''}
+        </span>
       `;
 
       btn.addEventListener('click', (e) => {
         const editBtn = e.target.closest('.edit-sec');
         if (editBtn) {
           e.stopPropagation();
+          this.closeDrawer();
           this.openWorkspaceModal(sec);
+          return;
+        }
+        const delBtn = e.target.closest('.delete-sec');
+        if (delBtn) {
+          e.stopPropagation();
+          this.closeDrawer();
+          this.deleteWorkspaceDirect(sec);
           return;
         }
         this.switchWorkspace(sec.id);
@@ -1149,6 +1214,31 @@ class CourseVaultApp {
 
       this.workspacesNavList.appendChild(btn);
     });
+  }
+
+  deleteWorkspaceDirect(sec) {
+    if (!sec || sec.isDefault) return;
+    if (confirm(`Delete workspace "${sec.title}"? Any items inside will be safely moved to Courses.`)) {
+      this.courses.forEach(c => {
+        if (c.sectionId === sec.id) c.sectionId = 'courses';
+      });
+      this.tools.forEach(t => {
+        if (t.sectionId === sec.id) t.sectionId = 'tools';
+      });
+
+      this.sections = this.sections.filter(s => s.id !== sec.id);
+      this.saveSections();
+      this.saveCourses();
+      this.saveTools();
+
+      if (this.activeSectionId === sec.id) {
+        this.switchWorkspace('courses');
+      } else {
+        this.renderWorkspacesNav();
+        this.renderCounts();
+      }
+      this.showToast(`Deleted workspace "${sec.title}"`, 'info');
+    }
   }
 
   switchWorkspace(sectionId) {
@@ -1248,6 +1338,10 @@ class CourseVaultApp {
         sec.description = desc;
         sec.icon = icon;
         this.saveSections();
+        if (this.activeSectionId === editId) {
+          if (this.activeCategoryTitle) this.activeCategoryTitle.textContent = title;
+          if (this.headerAddText && editId !== 'tools') this.headerAddText.textContent = `Add to ${shortName}`;
+        }
         this.showToast(`Updated workspace "${title}"`, 'success');
       }
     } else {
@@ -1325,11 +1419,95 @@ class CourseVaultApp {
           <span class="cat-row-count">${count} items</span>
         </div>
         <div class="cat-row-actions">
+          <button type="button" class="cat-action-btn edit-cat" title="Rename Category" aria-label="Rename Category">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+          </button>
           <button type="button" class="cat-action-btn delete-cat" title="Delete Category" aria-label="Delete Category">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
           </button>
         </div>
       `;
+
+      const editBtn = row.querySelector('.edit-cat');
+      editBtn.addEventListener('click', () => {
+        const nameSpan = row.querySelector('.cat-row-name');
+        const actionsDiv = row.querySelector('.cat-row-actions');
+        const currentName = cat.name;
+
+        // Toggle row into inline edit mode
+        nameSpan.innerHTML = `<input type="text" class="cat-inline-edit-input" value="${escapeHtml(currentName)}" />`;
+        const input = nameSpan.querySelector('input');
+        input.focus();
+        input.select();
+
+        actionsDiv.innerHTML = `
+          <button type="button" class="cat-action-btn save-edit-cat" title="Save Rename" aria-label="Save Rename" style="color: var(--accent-gold);">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </button>
+          <button type="button" class="cat-action-btn cancel-edit-cat" title="Cancel" aria-label="Cancel">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        `;
+
+        const doSave = () => {
+          const newName = input.value.trim();
+          if (!newName) {
+            this.showToast('Category name cannot be empty.', 'warning');
+            return;
+          }
+          if (newName === currentName) {
+            this.renderManageCategoriesList();
+            return;
+          }
+          if (this.categories.some(c => c.id !== cat.id && c.name.toLowerCase() === newName.toLowerCase())) {
+            this.showToast(`Category "${newName}" already exists.`, 'warning');
+            return;
+          }
+
+          const oldName = cat.name;
+          cat.name = newName;
+
+          // Cascade to courses
+          this.courses.forEach(c => {
+            if (c.category === oldName) c.category = newName;
+          });
+
+          // Cascade to tools
+          this.tools.forEach(t => {
+            if (t.category === oldName) t.category = newName;
+          });
+
+          if (this.activeCategoryFilter === oldName) {
+            this.activeCategoryFilter = newName;
+          }
+
+          this.saveCategories();
+          this.saveCourses();
+          this.saveTools();
+          this.populateCategoryDropdown();
+          this.renderManageCategoriesList();
+          this.render();
+          this.showToast(`Category renamed to "${newName}"`, 'success');
+        };
+
+        const saveBtn = actionsDiv.querySelector('.save-edit-cat');
+        const cancelBtn = actionsDiv.querySelector('.cancel-edit-cat');
+
+        saveBtn.addEventListener('click', doSave);
+        cancelBtn.addEventListener('click', () => {
+          this.renderManageCategoriesList();
+        });
+
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            doSave();
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            this.renderManageCategoriesList();
+          }
+        });
+      });
 
       const delBtn = row.querySelector('.delete-cat');
       delBtn.addEventListener('click', () => {
@@ -1341,9 +1519,14 @@ class CourseVaultApp {
           this.courses.forEach(c => {
             if (c.category === cat.name) c.category = 'General';
           });
+          this.tools.forEach(t => {
+            if (t.category === cat.name) t.category = 'General';
+          });
           this.categories = this.categories.filter(c => c.id !== cat.id);
           this.saveCategories();
           this.saveCourses();
+          this.saveTools();
+          this.populateCategoryDropdown();
           this.renderManageCategoriesList();
           this.render();
           this.showToast(`Deleted category "${cat.name}"`, 'info');
@@ -1640,6 +1823,7 @@ class CourseVaultApp {
         course.category = category;
         course.status = status;
         course.notes = notes;
+        course.lectures = this.activeEditingLectures || course.lectures || [];
         this.showToast(`Updated "${title}"!`, 'success');
       }
     } else {
@@ -1656,7 +1840,7 @@ class CourseVaultApp {
         category: category,
         status: status,
         notes: notes,
-        lectures: [],
+        lectures: this.activeEditingLectures || [],
         createdAt: new Date().toISOString()
       };
       this.courses.unshift(newCourse);
@@ -1742,6 +1926,12 @@ class CourseVaultApp {
     this.populateCategoryDropdown();
     this.duplicateWarningAlert.classList.add('hidden');
 
+    this.activeEditingCourseId = editCourse ? editCourse.id : null;
+    this.activeEditingLectures = (editCourse && Array.isArray(editCourse.lectures))
+      ? JSON.parse(JSON.stringify(editCourse.lectures))
+      : [];
+    this.updateLectureBadge();
+
     const submitBtn = document.getElementById('saveCourseSubmitBtn');
 
     if (editCourse) {
@@ -1818,6 +2008,179 @@ class CourseVaultApp {
     if (this.courseCoverFileInput) this.courseCoverFileInput.value = '';
     if (this.fileBadgeInfo) this.fileBadgeInfo.classList.add('hidden');
     if (this.coverUploadBtnText) this.coverUploadBtnText.textContent = 'Upload Cover Image from Device';
+  }
+
+  // ==========================================================================
+  // Dedicated Course Curriculum & Lecture Management Modal
+  // ==========================================================================
+
+  updateLectureBadge() {
+    if (!this.lectureCountBadge) return;
+    const count = this.activeEditingLectures ? this.activeEditingLectures.length : 0;
+    this.lectureCountBadge.textContent = `${count} lecture${count === 1 ? '' : 's'}`;
+  }
+
+  openLectureModal() {
+    if (!this.activeEditingLectures) this.activeEditingLectures = [];
+    const course = this.activeEditingCourseId ? this.courses.find(c => c.id === this.activeEditingCourseId) : null;
+    if (this.lectureModalTitle) {
+      this.lectureModalTitle.textContent = course ? `Manage Lectures: ${course.title}` : 'Manage Lectures & Curriculum';
+    }
+    this.renderLectureModalList();
+    if (this.lectureModalOverlay) this.lectureModalOverlay.classList.remove('hidden');
+  }
+
+  closeLectureModal() {
+    if (this.lectureModalOverlay) this.lectureModalOverlay.classList.add('hidden');
+    this.updateLectureBadge();
+  }
+
+  saveAndCloseLectureModal() {
+    if (this.activeEditingCourseId) {
+      const course = this.courses.find(c => c.id === this.activeEditingCourseId);
+      if (course) {
+        course.lectures = this.activeEditingLectures;
+        this.saveCourses();
+        this.render();
+      }
+    }
+    this.updateLectureBadge();
+    this.closeLectureModal();
+    this.showToast('Curriculum & lectures updated!', 'success');
+  }
+
+  handleBatchGenerateLectures() {
+    const input = this.batchLectureCountInput;
+    const num = input ? parseInt(input.value, 10) : 0;
+    if (!num || num <= 0 || num > 100) {
+      this.showToast('Please enter a valid count between 1 and 100', 'warning');
+      return;
+    }
+    const currentCount = this.activeEditingLectures.length;
+    for (let i = 1; i <= num; i++) {
+      const idx = currentCount + i;
+      const pad = idx < 10 ? '0' + idx : '' + idx;
+      this.activeEditingLectures.push({
+        id: 'lec-' + Date.now() + '-' + i,
+        title: `Lecture ${pad}`,
+        linkUrl: '',
+        notes: '',
+        completed: false
+      });
+    }
+    if (input) input.value = '';
+    this.renderLectureModalList();
+    this.updateLectureBadge();
+    this.showToast(`Generated ${num} new lecture slots!`, 'success');
+  }
+
+  handleSingleLectureAdd(e) {
+    if (e) e.preventDefault();
+    const title = this.newLectureTitle ? this.newLectureTitle.value.trim() : '';
+    const linkUrl = this.newLectureLink ? this.newLectureLink.value.trim() : '';
+    const notes = this.newLectureNotes ? this.newLectureNotes.value.trim() : '';
+
+    if (!title) {
+      this.showToast('Please enter a lecture title', 'warning');
+      return;
+    }
+
+    const newLec = {
+      id: 'lec-' + Date.now(),
+      title: title,
+      linkUrl: linkUrl,
+      notes: notes,
+      completed: false
+    };
+
+    this.activeEditingLectures.push(newLec);
+    if (this.lectureModalAddForm) this.lectureModalAddForm.reset();
+    this.renderLectureModalList();
+    this.updateLectureBadge();
+    this.showToast(`Added "${title}"`, 'success');
+  }
+
+  renderLectureModalList() {
+    if (!this.lectureModalList) return;
+    this.lectureModalList.innerHTML = '';
+
+    const lectures = this.activeEditingLectures || [];
+    const doneCount = lectures.filter(l => l.completed).length;
+    const pct = lectures.length > 0 ? Math.round((doneCount / lectures.length) * 100) : 0;
+
+    if (this.lectureModalStats) {
+      this.lectureModalStats.textContent = `${lectures.length} lecture${lectures.length === 1 ? '' : 's'} (${pct}% completed)`;
+    }
+
+    if (lectures.length === 0) {
+      this.lectureModalList.innerHTML = `
+        <div style="text-align: center; padding: 24px 12px; color: var(--text-muted); font-size: 0.85rem;">
+          No lectures created yet. Use <strong>Batch Create</strong> above or add a lecture below.
+        </div>
+      `;
+      return;
+    }
+
+    lectures.forEach((lec, idx) => {
+      const card = document.createElement('div');
+      card.className = `lecture-manage-card ${lec.completed ? 'completed' : ''}`;
+      card.dataset.lectureId = lec.id;
+
+      card.innerHTML = `
+        <input type="checkbox" class="lecture-card-checkbox" ${lec.completed ? 'checked' : ''} title="Mark completed" />
+        <div class="lecture-card-content">
+          <input type="text" class="lecture-title-edit-input" value="${escapeHtml(lec.title)}" placeholder="Lecture title..." />
+          <div class="lecture-meta-inputs-row">
+            <input type="url" class="form-input form-input-xs lecture-link-edit" value="${escapeHtml(lec.linkUrl || '')}" placeholder="Companion URL (GitHub, slides)..." />
+            <input type="text" class="form-input form-input-xs lecture-notes-edit" value="${escapeHtml(lec.notes || '')}" placeholder="Notes / topics..." />
+            ${lec.linkUrl ? `<a href="${escapeHtml(lec.linkUrl)}" target="_blank" rel="noopener noreferrer" class="cat-action-btn" title="Open companion link" style="color: var(--accent-gold);"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg></a>` : ''}
+          </div>
+        </div>
+        <button type="button" class="lecture-delete-action-btn" title="Delete lecture">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      `;
+
+      // Checkbox toggle
+      const cb = card.querySelector('.lecture-card-checkbox');
+      cb.addEventListener('change', () => {
+        lec.completed = cb.checked;
+        card.classList.toggle('completed', cb.checked);
+        const newDone = lectures.filter(l => l.completed).length;
+        const newPct = Math.round((newDone / lectures.length) * 100);
+        if (this.lectureModalStats) {
+          this.lectureModalStats.textContent = `${lectures.length} lecture${lectures.length === 1 ? '' : 's'} (${newPct}% completed)`;
+        }
+      });
+
+      // Title edit
+      const titleInput = card.querySelector('.lecture-title-edit-input');
+      titleInput.addEventListener('input', () => {
+        lec.title = titleInput.value;
+      });
+
+      // Link edit
+      const linkInput = card.querySelector('.lecture-link-edit');
+      linkInput.addEventListener('input', () => {
+        lec.linkUrl = linkInput.value.trim();
+      });
+
+      // Notes edit
+      const notesInput = card.querySelector('.lecture-notes-edit');
+      notesInput.addEventListener('input', () => {
+        lec.notes = notesInput.value.trim();
+      });
+
+      // Delete lecture
+      const delBtn = card.querySelector('.lecture-delete-action-btn');
+      delBtn.addEventListener('click', () => {
+        this.activeEditingLectures = this.activeEditingLectures.filter(l => l.id !== lec.id);
+        this.renderLectureModalList();
+        this.updateLectureBadge();
+      });
+
+      this.lectureModalList.appendChild(card);
+    });
   }
 
   // ==========================================================================
@@ -2197,7 +2560,6 @@ class CourseVaultApp {
 
     const media = this.resolveItemMedia(course);
     const progress = this.calculateCourseProgress(course);
-    const isExpanded = this.expandedLecturesCourseIds.has(course.id);
     const dateFormatted = new Date(course.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 
     // Thumbnail markup
@@ -2251,29 +2613,6 @@ class CourseVaultApp {
       `;
     }
 
-    // Dynamic lectures list inside accordion
-    let lecturesListHtml = '';
-    const lectures = Array.isArray(course.lectures) ? course.lectures : [];
-    if (lectures.length > 0) {
-      lecturesListHtml = lectures.map((lec, idx) => `
-        <div class="lecture-item-row ${lec.completed ? 'completed' : ''}" data-lecture-id="${lec.id}">
-          <input type="checkbox" class="lecture-checkbox" ${lec.completed ? 'checked' : ''} title="Mark lecture complete" />
-          <div class="lecture-content-col">
-            <span class="lecture-title-text">${idx + 1}. ${escapeHtml(lec.title)}</span>
-            <div class="lecture-meta-row">
-              ${lec.linkUrl ? `<a href="${escapeHtml(lec.linkUrl)}" target="_blank" rel="noopener noreferrer" class="companion-link-pill" title="Open companion resource"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg> Resource</a>` : ''}
-              ${lec.notes ? `<span class="lecture-notes-snippet">${escapeHtml(lec.notes)}</span>` : ''}
-            </div>
-          </div>
-          <button type="button" class="lecture-delete-btn" title="Delete Lecture">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-          </button>
-        </div>
-      `).join('');
-    } else {
-      lecturesListHtml = `<div style="font-size: 0.78rem; color: var(--text-muted); padding: 4px 0;">No lectures tracked yet. Add your first lecture below:</div>`;
-    }
-
     // LIST VIEW ROW MARKUP
     const listRowHtml = `
       <div class="list-row-main">
@@ -2290,7 +2629,7 @@ class CourseVaultApp {
 
         <div class="list-progress-col">
           <div class="progress-header">
-            <span>Progress</span>
+            <span>${progress.hasLectures ? `${progress.done}/${progress.total} done` : 'Progress'}</span>
             <span class="progress-pct-badge">${progress.pct}%</span>
           </div>
           <div class="progress-bar-track">
@@ -2302,15 +2641,14 @@ class CourseVaultApp {
           <a href="${escapeHtml(course.url)}" target="_blank" rel="noopener noreferrer" class="btn-watch-yt">
             <span>Watch</span>
           </a>
-          <button type="button" class="card-icon-action toggle-lectures-btn ${isExpanded ? 'expanded' : ''}" title="Lectures & Assets">
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-          </button>
-          <button type="button" class="card-icon-action edit-course-btn" title="Edit course">
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-          </button>
-          <button type="button" class="card-icon-action delete-action delete-course-btn" title="Delete course">
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-          </button>
+          <div class="card-actions-group">
+            <button type="button" class="card-icon-action edit-course-btn" title="Edit course & lectures" aria-label="Edit course">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            </button>
+            <button type="button" class="card-icon-action delete-action delete-course-btn" title="Delete course" aria-label="Delete course">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
+          </div>
         </div>
       </div>
     `;
@@ -2354,62 +2692,36 @@ class CourseVaultApp {
           </button>
         </div>
 
-        <!-- Lectures Accordion Toggle Button -->
-        <button type="button" class="card-lectures-toggle ${isExpanded ? 'expanded' : ''}">
-          <span class="lectures-toggle-title">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-            <span>Lectures & Assets</span>
-          </span>
-          <span class="lectures-count-badge">${lectures.length}</span>
-          <svg class="lectures-chevron-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
-        </button>
-
-        <!-- Footer Actions -->
+        <!-- Footer Actions (Aligned row, no overlap) -->
         <div class="card-actions-footer">
           <a href="${escapeHtml(course.url)}" target="_blank" rel="noopener noreferrer" class="btn-watch-yt">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
             <span>Watch on YouTube</span>
           </a>
 
-          <button class="card-icon-action copy-link-btn" title="Copy clean link" aria-label="Copy course link">
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
-          </button>
+          <div class="card-actions-group">
+            <button class="card-icon-action copy-link-btn" title="Copy clean link" aria-label="Copy course link">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+            </button>
 
-          <button class="card-icon-action edit-course-btn" title="Edit course" aria-label="Edit course">
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-          </button>
+            <button class="card-icon-action edit-course-btn" title="Edit course & lectures" aria-label="Edit course">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            </button>
 
-          <button class="card-icon-action delete-action delete-course-btn" title="Delete course" aria-label="Delete course">
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-          </button>
-        </div>
-      </div>
-    `;
-
-    // ACCORDION DRAWER MARKUP (Shared across list and grid)
-    const drawerHtml = `
-      <div class="card-lectures-drawer ${isExpanded ? 'expanded' : ''}">
-        <div class="lectures-list">
-          ${lecturesListHtml}
-        </div>
-        <form class="lecture-inline-add">
-          <div class="lecture-quick-inputs">
-            <input type="text" class="lecture-input-sm lecture-add-title" placeholder="Lecture title (e.g. 05 - Routing Protocols)..." required autocomplete="off" />
-            <input type="url" class="lecture-input-sm lecture-add-link" placeholder="Companion URL (e.g. GitHub repo, slides)..." autocomplete="off" />
-            <input type="text" class="lecture-input-sm lecture-add-notes" placeholder="Notes (optional)..." autocomplete="off" />
+            <button class="card-icon-action delete-action delete-course-btn" title="Delete course" aria-label="Delete course">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
           </div>
-          <button type="submit" class="btn-add-lecture-inline">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            <span>+ Add Lecture</span>
-          </button>
-        </form>
+        </div>
       </div>
     `;
 
     card.innerHTML = `
+      <div class="card-grid-view">
+        ${thumbnailHtml}
+        ${gridContentHtml}
+      </div>
       ${listRowHtml}
-      ${gridContentHtml}
-      ${drawerHtml}
     `;
 
     // Event Listeners on Card
@@ -2420,70 +2732,14 @@ class CourseVaultApp {
       });
     });
 
-    // Accordion Toggle Handlers
-    const toggleButtons = card.querySelectorAll('.card-lectures-toggle, .toggle-lectures-btn');
-    const drawer = card.querySelector('.card-lectures-drawer');
-
-    toggleButtons.forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (this.expandedLecturesCourseIds.has(course.id)) {
-          this.expandedLecturesCourseIds.delete(course.id);
-          drawer.classList.remove('expanded');
-          toggleButtons.forEach(b => b.classList.remove('expanded'));
-        } else {
-          this.expandedLecturesCourseIds.add(course.id);
-          drawer.classList.add('expanded');
-          toggleButtons.forEach(b => b.classList.add('expanded'));
-        }
-      });
-    });
-
-    // Lecture Checkboxes
-    card.querySelectorAll('.lecture-checkbox').forEach(chk => {
-      chk.addEventListener('change', (e) => {
-        const row = e.target.closest('.lecture-item-row');
-        if (row && row.dataset.lectureId) {
-          this.toggleLecture(course.id, row.dataset.lectureId, chk.checked);
-        }
-      });
-    });
-
-    // Lecture Delete Buttons
-    card.querySelectorAll('.lecture-delete-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const row = e.target.closest('.lecture-item-row');
-        if (row && row.dataset.lectureId) {
-          this.deleteLecture(course.id, row.dataset.lectureId);
-        }
-      });
-    });
-
-    // Inline Add Lecture Form
-    const addForm = card.querySelector('.lecture-inline-add');
-    if (addForm) {
-      addForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const titleInput = addForm.querySelector('.lecture-add-title');
-        const linkInput = addForm.querySelector('.lecture-add-link');
-        const notesInput = addForm.querySelector('.lecture-add-notes');
-
-        if (!titleInput || !titleInput.value.trim()) return;
-
-        this.addLecture(course.id, titleInput.value, linkInput ? linkInput.value : '', notesInput ? notesInput.value : '');
-      });
-    }
-
     // Category tag filter click
-    const tag = card.querySelector('.category-tag');
-    if (tag) {
+    card.querySelectorAll('.category-tag').forEach(tag => {
       tag.addEventListener('click', (e) => {
         e.stopPropagation();
         this.activeCategoryFilter = course.category;
         this.render();
       });
-    }
+    });
 
     // Copy clean link
     const copyBtn = card.querySelector('.copy-link-btn');
