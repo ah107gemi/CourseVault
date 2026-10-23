@@ -6,7 +6,7 @@
   <title>CourseVault — Modern Course Tracker & Offline PWA</title>
   
   <!-- PWA Meta Tags -->
-  <meta name="theme-color" content="#0b0f17">
+  <meta name="theme-color" content="#0b0d11">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -103,26 +103,15 @@
           </button>
         </div>
 
-        <!-- Primary Views -->
-        <div class="channel-section-heading">PRIMARY VIEWS</div>
-        <div class="channel-section">
-          <button class="channel-item active" data-nav-view="courses" data-category="all" id="navAllCourses">
-            <span class="channel-icon">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-            </span>
-            <span class="channel-name">All Courses</span>
-            <span class="badge" id="countAll">0</span>
+        <!-- Dynamic Workspaces -->
+        <div class="sidebar-section-header">
+          <span class="channel-section-heading">WORKSPACES</span>
+          <button class="icon-btn-xs" id="openAddWorkspaceBtn" title="Create New Workspace / Section">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
           </button>
-
-          <button class="channel-item" data-nav-view="tools" id="navTools">
-            <span class="channel-icon">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
-              </svg>
-            </span>
-            <span class="channel-name">Tools & Utilities</span>
-            <span class="badge badge-tools" id="countTools">0</span>
-          </button>
+        </div>
+        <div class="workspaces-nav-list" id="workspacesNavList">
+          <!-- Dynamically populated workspaces: Courses, Tools, Custom Workspaces -->
         </div>
 
         <!-- Status Filter Views -->
@@ -146,9 +135,12 @@
         </div>
 
         <!-- Custom Categories List -->
-        <div class="channel-section-heading">
-          <span>CATEGORIES</span>
-          <button class="text-link-btn" id="sidebarAddCatBtn">+ Add</button>
+        <div class="sidebar-section-header">
+          <span class="channel-section-heading">CATEGORIES</span>
+          <div class="section-actions-right">
+            <button class="text-link-btn" id="openManageCategoriesBtn" title="Manage all categories">Manage</button>
+            <button class="text-link-btn" id="sidebarAddCatBtn">+ Add</button>
+          </div>
         </div>
         <div class="category-channels-list" id="categoryChannelsList">
           <!-- Dynamically populated categories -->
@@ -182,7 +174,7 @@
               <span class="course-count-tag" id="activeFilterCount">0 courses</span>
             </div>
 
-            <!-- Status Filter Tabs -->
+            <!-- Status Filter Tabs & View / Sort Toolbar -->
             <div class="filter-toolbar">
               <div class="status-tabs" id="statusTabsContainer">
                 <button class="status-tab active" data-tab-status="all">All</button>
@@ -191,15 +183,31 @@
                 <button class="status-tab" data-tab-status="Completed">Completed</button>
               </div>
 
-              <!-- Sort dropdown -->
-              <div class="sort-wrapper">
-                <label for="sortSelect" class="sr-only">Sort Courses</label>
-                <select id="sortSelect" class="sort-select">
-                  <option value="newest">Sort: Newest First</option>
-                  <option value="oldest">Sort: Oldest First</option>
-                  <option value="title">Sort: Title (A-Z)</option>
-                  <option value="status">Sort: Status</option>
-                </select>
+              <!-- View Switcher & Sort wrapper -->
+              <div class="view-and-sort-group">
+                <div class="view-mode-switcher" id="viewModeSwitcher" role="radiogroup" aria-label="View Mode">
+                  <button class="view-mode-btn active" data-view-mode="grid" title="Grid View" aria-label="Grid View">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect></svg>
+                  </button>
+                  <button class="view-mode-btn" data-view-mode="compact" title="Compact Grid View" aria-label="Compact Grid View">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="7" height="4" rx="1"></rect><rect x="14" y="4" width="7" height="4" rx="1"></rect><rect x="3" y="10" width="7" height="4" rx="1"></rect><rect x="14" y="10" width="7" height="4" rx="1"></rect><rect x="3" y="16" width="7" height="4" rx="1"></rect><rect x="14" y="16" width="7" height="4" rx="1"></rect></svg>
+                  </button>
+                  <button class="view-mode-btn" data-view-mode="list" title="List View" aria-label="List View">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                  </button>
+                </div>
+
+                <!-- Sort dropdown -->
+                <div class="sort-wrapper">
+                  <label for="sortSelect" class="sr-only">Sort Courses</label>
+                  <select id="sortSelect" class="sort-select">
+                    <option value="newest">Sort: Newest First</option>
+                    <option value="oldest">Sort: Oldest First</option>
+                    <option value="title">Sort: Title (A-Z)</option>
+                    <option value="progress">Sort: Progress (%)</option>
+                    <option value="status">Sort: Status</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
@@ -461,6 +469,17 @@
           >
         </div>
 
+        <!-- Workspace / Section Selection -->
+        <div class="form-group">
+          <label for="courseSectionSelect" class="form-label">
+            <span>Workspace / Section</span>
+            <span class="required-mark">*</span>
+          </label>
+          <select id="courseSectionSelect" class="form-select" required>
+            <!-- Populated dynamically: Courses, Tools, Custom Workspaces -->
+          </select>
+        </div>
+
         <!-- Category Dropdown with inline "+ Add New Category" -->
         <div class="form-group">
           <div class="label-with-action">
@@ -586,6 +605,118 @@
     </div>
   </div>
 
+  <!-- MODAL: Add / Edit Workspace -->
+  <div class="modal-overlay hidden" id="workspaceModalOverlay">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="workspaceModalTitle">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon-badge workspace-badge-accent">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+          </div>
+          <h2 class="modal-title" id="workspaceModalTitle">Create Workspace</h2>
+        </div>
+        <button class="modal-close-btn" id="closeWorkspaceModalBtn" aria-label="Close modal">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <form id="workspaceForm" class="modal-form" novalidate>
+        <input type="hidden" id="workspaceEditId" value="">
+
+        <div class="form-group">
+          <label for="workspaceTitleInput" class="form-label">
+            <span>Workspace Name</span>
+            <span class="required-mark">*</span>
+          </label>
+          <input 
+            type="text" 
+            id="workspaceTitleInput" 
+            class="form-input" 
+            placeholder="e.g. Websites, Projects, Reading List, Dev Tools" 
+            required
+            autocomplete="off"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="workspaceShortNameInput" class="form-label">
+            <span>Short Label (Sidebar)</span>
+            <span class="required-mark">*</span>
+          </label>
+          <input 
+            type="text" 
+            id="workspaceShortNameInput" 
+            class="form-input" 
+            placeholder="e.g. Websites" 
+            required
+            autocomplete="off"
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Workspace Icon</label>
+          <div class="workspace-icon-picker" id="workspaceIconPicker">
+            <!-- Icon chips dynamically loaded / rendered -->
+          </div>
+          <input type="hidden" id="workspaceSelectedIcon" value="folder">
+        </div>
+
+        <div class="form-group">
+          <label for="workspaceDescInput" class="form-label">Description (Optional)</label>
+          <textarea id="workspaceDescInput" class="form-textarea" rows="2" placeholder="e.g. Curated bookmarks, repositories, and technical resources."></textarea>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="cancelWorkspaceBtn">Cancel</button>
+          <button type="button" class="btn btn-danger hidden" id="deleteWorkspaceBtn">Delete</button>
+          <button type="submit" class="btn btn-primary" id="saveWorkspaceSubmitBtn">Save Workspace</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Manage Categories -->
+  <div class="modal-overlay hidden" id="manageCategoriesModalOverlay">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="manageCategoriesModalTitle">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon-badge cat-badge-accent">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+          </div>
+          <h2 class="modal-title" id="manageCategoriesModalTitle">Manage Categories</h2>
+        </div>
+        <button class="modal-close-btn" id="closeManageCategoriesModalBtn" aria-label="Close modal">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <div class="categories-manager-body">
+        <p class="manager-subtitle">Organize and customize categories used across all your workspaces.</p>
+        
+        <div class="categories-manager-list" id="manageCategoriesList">
+          <!-- Populated by JavaScript with category rows -->
+        </div>
+
+        <div class="categories-manager-add-section">
+          <h4 class="manager-add-heading">+ Add New Category</h4>
+          <form id="inlineCategoryForm" class="manager-inline-form">
+            <div class="inline-form-row">
+              <input type="text" id="manageNewCatName" class="form-input" placeholder="Category name..." required>
+              <div class="manager-palette-preview">
+                <input type="color" id="manageNewCatColor" value="#D4AF37" title="Pick Accent Color">
+              </div>
+              <button type="submit" class="btn btn-primary btn-sm">Add</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="closeManageCategoriesFooterBtn">Done</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL: Backup & Restore -->
   <div class="modal-overlay hidden" id="backupModalOverlay">
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="backupModalTitle">
@@ -693,6 +824,17 @@
 
       <form id="toolForm" class="modal-form" novalidate>
         <input type="hidden" id="toolEditId" value="">
+
+        <!-- Workspace / Section Selection for Tool -->
+        <div class="form-group">
+          <label for="toolSectionSelect" class="form-label">
+            <span>Workspace / Section</span>
+            <span class="required-mark">*</span>
+          </label>
+          <select id="toolSectionSelect" class="form-select" required>
+            <!-- Populated dynamically -->
+          </select>
+        </div>
 
         <!-- Tool Name -->
         <div class="form-group">

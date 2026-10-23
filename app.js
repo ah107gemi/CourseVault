@@ -1,28 +1,49 @@
 /**
- * CourseVault — Modern Course Tracker & Offline PWA
- * Application Logic & Local Storage Store
+ * CourseVault — Executive Dark-Tech Productivity Workstation & Mobile PWA
+ * Application Logic, Multi-Workspace Engine, Lecture Tracker & Storage Store
  */
 
 // ==========================================================================
-// 1. Initial State & Defaults
+// 1. Initial State & Storage Keys
 // ==========================================================================
 
 const STORAGE_KEY_COURSES = 'coursevault_courses_v1';
 const STORAGE_KEY_CATEGORIES = 'coursevault_categories_v1';
 const STORAGE_KEY_TOOLS = 'coursevault_tools_v1';
+const STORAGE_KEY_SECTIONS = 'coursevault_sections_v2';
+const STORAGE_KEY_VIEW_MODE = 'coursevault_view_mode_v2';
+
+const DEFAULT_SECTIONS = [
+  {
+    id: 'courses',
+    title: 'Courses & Masterclasses',
+    shortName: 'Courses',
+    icon: 'video',
+    description: 'Curated technical courses, tutorials, and masterclasses.',
+    isDefault: true
+  },
+  {
+    id: 'tools',
+    title: 'Tools & Utilities',
+    shortName: 'Tools',
+    icon: 'tools',
+    description: 'Online utilities, developer tools, and productivity bookmarks.',
+    isDefault: true
+  }
+];
 
 const DEFAULT_CATEGORIES = [
-  { id: 'cat-general', name: 'General', color: '#6366f1' },
+  { id: 'cat-general', name: 'General', color: '#D4AF37' },
   { id: 'cat-python', name: 'Python', color: '#10b981' },
-  { id: 'cat-webdev', name: 'Web Dev', color: '#06b6d4' },
+  { id: 'cat-webdev', name: 'Web Dev', color: '#38bdf8' },
   { id: 'cat-ai', name: 'AI & Data', color: '#ec4899' },
   { id: 'cat-design', name: 'Design', color: '#f59e0b' }
 ];
 
-// Optional demo/starter pack: can be loaded on demand via Backup/Restore modal
 const SAMPLE_COURSES = [
   {
     id: 'sample-course-1',
+    sectionId: 'courses',
     title: 'Free CCNA 200-301 Complete Course - Day 1 to Day 60',
     url: 'https://www.youtube.com/playlist?list=PLxbwE86Cz83-cgvEt-p_0dJ8c_4jXgXmZ',
     normalizedUrl: 'https://www.youtube.com/playlist?list=PLxbwE86Cz83-cgvEt-p_0dJ8c_4jXgXmZ',
@@ -33,34 +54,52 @@ const SAMPLE_COURSES = [
     category: 'General',
     status: 'In Progress',
     notes: 'Jeremy\'s IT Lab. Complete 200-301 syllabus with packet tracer labs and Anki flashcards.',
+    lectures: [
+      { id: 'lec-1', title: 'Day 1 - Network Devices & Topology Architecture', completed: true, linkUrl: 'https://github.com/jeremy-ccna', notes: 'Core router and switch definitions.' },
+      { id: 'lec-2', title: 'Day 2 - Interfaces, Cables, and Fiber Optics', completed: true, linkUrl: '', notes: 'Single-mode vs multimode fiber.' },
+      { id: 'lec-3', title: 'Day 3 - OSI Model and TCP/IP Encapsulation', completed: false, linkUrl: '', notes: 'Headers, payloads, and bit frames.' },
+      { id: 'lec-4', title: 'Day 4 - IPv4 Addressing & Subnet Masks', completed: false, linkUrl: '', notes: 'Binary conversion drill.' }
+    ],
     createdAt: new Date().toISOString()
   },
   {
     id: 'sample-course-2',
+    sectionId: 'courses',
     title: 'Python for Beginners – Full Course [Programming with Mosh]',
     url: 'https://www.youtube.com/watch?v=_uQrJ0TkZlc',
     normalizedUrl: 'https://www.youtube.com/watch?v=_uQrJ0TkZlc',
     videoId: '_uQrJ0TkZlc',
     playlistId: null,
-    thumbnailUrl: 'https://img.youtube.com/vi/_uQrJ0TkZlc/hqdefault.jpg',
+    thumbnailUrl: 'https://img.youtube.com/vi/_uQrJ0TkZlc/maxresdefault.jpg',
     customThumbnailUrl: '',
     category: 'Python',
     status: 'Completed',
     notes: 'Great 6-hour foundations on variables, loops, classes, and PyCharm setup.',
+    lectures: [
+      { id: 'lec-201', title: '01 - Variables, Input & Type Conversion', completed: true, linkUrl: '', notes: 'Syntax fundamentals.' },
+      { id: 'lec-202', title: '02 - Strings, Math & Logical Operators', completed: true, linkUrl: '', notes: 'String indexing and methods.' },
+      { id: 'lec-203', title: '03 - Lists, Tuples & Dictionaries', completed: true, linkUrl: '', notes: 'Data structures.' },
+      { id: 'lec-204', title: '04 - Classes & Object Oriented Programming', completed: true, linkUrl: '', notes: 'Inheritance and dunder methods.' }
+    ],
     createdAt: new Date().toISOString()
   },
   {
     id: 'sample-course-3',
+    sectionId: 'courses',
     title: 'Build Autonomous AI Agents with LangChain & Python',
     url: 'https://www.youtube.com/watch?v=aywZrzNaKjs',
     normalizedUrl: 'https://www.youtube.com/watch?v=aywZrzNaKjs',
     videoId: 'aywZrzNaKjs',
     playlistId: null,
-    thumbnailUrl: 'https://img.youtube.com/vi/aywZrzNaKjs/hqdefault.jpg',
+    thumbnailUrl: 'https://img.youtube.com/vi/aywZrzNaKjs/maxresdefault.jpg',
     customThumbnailUrl: '',
     category: 'AI & Data',
     status: 'Want to Learn',
     notes: 'Multi-agent systems, function calling, and local LLM orchestration.',
+    lectures: [
+      { id: 'lec-301', title: '01 - LangGraph Setup and Agent Loop', completed: false, linkUrl: 'https://github.com/langchain-ai', notes: 'State graph architecture.' },
+      { id: 'lec-302', title: '02 - Tool Calling & Structured Outputs', completed: false, linkUrl: '', notes: 'Pydantic integration.' }
+    ],
     createdAt: new Date().toISOString()
   }
 ];
@@ -68,6 +107,7 @@ const SAMPLE_COURSES = [
 const SAMPLE_TOOLS = [
   {
     id: 'sample-tool-1',
+    sectionId: 'tools',
     name: 'iLovePDF',
     url: 'https://www.ilovepdf.com',
     category: 'PDF',
@@ -76,6 +116,7 @@ const SAMPLE_TOOLS = [
   },
   {
     id: 'sample-tool-2',
+    sectionId: 'tools',
     name: 'TinyURL',
     url: 'https://tinyurl.com',
     category: 'Utility',
@@ -84,6 +125,7 @@ const SAMPLE_TOOLS = [
   },
   {
     id: 'sample-tool-3',
+    sectionId: 'tools',
     name: 'Clippobot',
     url: 'https://clippobot.com',
     category: 'Downloader',
@@ -92,6 +134,7 @@ const SAMPLE_TOOLS = [
   },
   {
     id: 'sample-tool-4',
+    sectionId: 'tools',
     name: 'Remove.bg',
     url: 'https://www.remove.bg',
     category: 'Design',
@@ -100,6 +143,7 @@ const SAMPLE_TOOLS = [
   },
   {
     id: 'sample-tool-5',
+    sectionId: 'tools',
     name: 'Excalidraw',
     url: 'https://excalidraw.com',
     category: 'Productivity',
@@ -108,20 +152,49 @@ const SAMPLE_TOOLS = [
   }
 ];
 
+function getWorkspaceIconSvg(icon, size = 16) {
+  switch (icon) {
+    case 'video':
+      return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.5" ry="2.5"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>`;
+    case 'tools':
+      return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>`;
+    case 'code':
+      return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>`;
+    case 'book':
+      return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>`;
+    case 'globe':
+      return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>`;
+    case 'star':
+      return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
+    case 'cpu':
+      return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>`;
+    case 'terminal':
+      return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>`;
+    case 'bookmark':
+      return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>`;
+    case 'folder':
+    default:
+      return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`;
+  }
+}
+
 class CourseVaultApp {
   constructor() {
+    this.sections = [];
+    this.activeSectionId = 'courses';
+    this.viewMode = 'grid'; // 'grid' | 'compact' | 'list'
     this.courses = [];
     this.categories = [];
     this.tools = [];
-    this.activeView = 'courses';        // 'courses' or 'tools'
-    this.activeToolCategory = 'all';    // 'all' or specific tool category
-    this.activeCategoryFilter = 'all';  // 'all' or category name
-    this.activeStatusFilter = 'all';    // 'all', 'Want to Learn', 'In Progress', 'Completed'
+    this.activeToolCategory = 'all';
+    this.activeCategoryFilter = 'all';
+    this.activeStatusFilter = 'all';
     this.searchQuery = '';
     this.sortOption = 'newest';
-    this.itemToDelete = null;           // { type: 'course'|'tool', id: string, title: string }
-    this.courseToDeleteId = null;       // backward compatibility
+    this.itemToDelete = null;
+    this.courseToDeleteId = null;
     this.deferredInstallPrompt = null;
+    this.expandedLecturesCourseIds = new Set();
 
     this.init();
   }
@@ -136,11 +209,26 @@ class CourseVaultApp {
     this.setupEventListeners();
     this.setupPwa();
     this.render();
-    this.renderTools();
   }
 
   loadState() {
     try {
+      // 1. Sections / Workspaces
+      const storedSections = localStorage.getItem(STORAGE_KEY_SECTIONS);
+      if (storedSections) {
+        this.sections = JSON.parse(storedSections);
+      } else {
+        this.sections = [...DEFAULT_SECTIONS];
+        this.saveSections();
+      }
+
+      // 2. View Mode
+      const storedViewMode = localStorage.getItem(STORAGE_KEY_VIEW_MODE);
+      if (storedViewMode && ['grid', 'compact', 'list'].includes(storedViewMode)) {
+        this.viewMode = storedViewMode;
+      }
+
+      // 3. Categories
       const storedCategories = localStorage.getItem(STORAGE_KEY_CATEGORIES);
       if (storedCategories) {
         this.categories = JSON.parse(storedCategories);
@@ -149,28 +237,28 @@ class CourseVaultApp {
         this.saveCategories();
       }
 
+      // 4. Courses
       const storedCourses = localStorage.getItem(STORAGE_KEY_COURSES);
       if (storedCourses) {
         this.courses = JSON.parse(storedCourses);
       } else {
-        // First-time visitor: start with clean personalized workspace
         this.courses = [];
         this.saveCourses();
       }
 
+      // 5. Tools
       const storedTools = localStorage.getItem(STORAGE_KEY_TOOLS);
       if (storedTools) {
         this.tools = JSON.parse(storedTools);
       } else {
-        // First-time visitor: start with clean personalized workspace
         this.tools = [];
         this.saveTools();
       }
 
-      // Heal & migrate any existing courses if present
-      this.migrateExistingCourses();
+      this.migrateDataSchema();
     } catch (e) {
       console.error('Failed to parse localStorage data:', e);
+      this.sections = [...DEFAULT_SECTIONS];
       this.categories = [...DEFAULT_CATEGORIES];
       this.courses = [];
       this.tools = [];
@@ -178,50 +266,75 @@ class CourseVaultApp {
   }
 
   /**
-   * Automatically heals and migrates existing courses stored in browser localStorage.
-   * Priority: Custom Image URL > Auto YouTube Video Thumbnail > Default generic placeholder
+   * Seamlessly migrates existing courses and tools into multi-workspace schema with lectures
    */
-  migrateExistingCourses() {
+  migrateDataSchema() {
     let hasChanges = false;
+
     this.courses = this.courses.map(course => {
       const videoId = this.extractYouTubeVideoId(course.url) || course.videoId || null;
       const playlistId = this.extractYouTubePlaylistId(course.url) || course.playlistId || null;
       const customCover = (course.customThumbnailUrl || course.customCoverUrl || '').trim();
-      
-      // Strict priority: Custom Image URL > Auto YouTube Video Thumbnail > Default generic placeholder
+      const sectionId = course.sectionId || 'courses';
+      const lectures = Array.isArray(course.lectures) ? course.lectures : [];
+
       let thumb = '';
       if (customCover) {
         thumb = customCover;
       } else if (videoId) {
-        thumb = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+        thumb = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
       }
 
-      if (course.videoId !== videoId || course.thumbnailUrl !== thumb || course.playlistId !== playlistId || course.customThumbnailUrl !== customCover) {
+      if (course.sectionId !== sectionId || !Array.isArray(course.lectures) || course.thumbnailUrl !== thumb) {
         hasChanges = true;
       }
 
       return {
         ...course,
+        sectionId: sectionId,
         videoId: videoId,
         playlistId: playlistId,
         thumbnailUrl: thumb,
-        customThumbnailUrl: customCover
+        customThumbnailUrl: customCover,
+        lectures: lectures
+      };
+    });
+
+    this.tools = this.tools.map(tool => {
+      const sectionId = tool.sectionId || 'tools';
+      if (tool.sectionId !== sectionId) hasChanges = true;
+      return {
+        ...tool,
+        sectionId: sectionId
       };
     });
 
     if (hasChanges) {
       this.saveCourses();
-      console.log('[CourseVault] Courses healed & migrated with Custom Cover priority.');
+      this.saveTools();
+      console.log('[CourseVault] Schema migrated to v2 (workspaces & lectures intact).');
     }
+  }
+
+  saveSections() {
+    try {
+      localStorage.setItem(STORAGE_KEY_SECTIONS, JSON.stringify(this.sections));
+    } catch (err) {
+      console.error('[CourseVault] Failed to save workspaces:', err);
+    }
+  }
+
+  saveViewMode() {
+    localStorage.setItem(STORAGE_KEY_VIEW_MODE, this.viewMode);
   }
 
   saveCourses() {
     try {
       localStorage.setItem(STORAGE_KEY_COURSES, JSON.stringify(this.courses));
     } catch (err) {
-      console.error('[CourseVault] Failed to save courses to localStorage:', err);
+      console.error('[CourseVault] Failed to save courses:', err);
       if (err.name === 'QuotaExceededError' || err.code === 22) {
-        this.showToast('Storage quota reached! Delete unused courses or large custom covers.', 'danger');
+        this.showToast('Storage quota reached! Delete unused entries or large custom covers.', 'danger');
       } else {
         this.showToast('Could not save data to browser storage.', 'danger');
       }
@@ -236,12 +349,11 @@ class CourseVaultApp {
     try {
       localStorage.setItem(STORAGE_KEY_TOOLS, JSON.stringify(this.tools));
     } catch (err) {
-      console.error('[CourseVault] Failed to save tools to localStorage:', err);
+      console.error('[CourseVault] Failed to save tools:', err);
       this.showToast('Could not save tools to browser storage.', 'danger');
     }
   }
 
-  // Setup Service Worker & PWA Install Prompts
   setupPwa() {
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
@@ -257,18 +369,14 @@ class CourseVaultApp {
       });
     }
 
-    // PWA Install Prompt
     const installBtn = document.getElementById('installPwaBtn');
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       this.deferredInstallPrompt = e;
-      if (installBtn) {
-        installBtn.classList.remove('hidden');
-      }
+      if (installBtn) installBtn.classList.remove('hidden');
     });
 
     window.addEventListener('appinstalled', () => {
-      console.log('[CourseVault] PWA installed successfully');
       if (installBtn) installBtn.classList.add('hidden');
       this.showToast('CourseVault installed to home screen!', 'success');
       this.deferredInstallPrompt = null;
@@ -282,76 +390,83 @@ class CourseVaultApp {
   }
 
   // ==========================================================================
-  // 3. URL Normalization & Duplicate Detection
+  // 3. Media & URL Helpers
   // ==========================================================================
 
-  /**
-   * Extracts YouTube 11-character Video ID from:
-   * 1. Standard watch links: watch?v=VIDEO_ID (including with playlist or tracking attached)
-   * 2. Short links: youtu.be/VIDEO_ID
-   * 3. Playlist links with video attached: playlist?list=...&v=VIDEO_ID or watch?v=...&list=...
-   * 4. Shorts, Embed, Live, and /v/ links
-   */
   extractYouTubeVideoId(rawUrl) {
     if (!rawUrl || typeof rawUrl !== 'string') return null;
     const clean = rawUrl.trim();
 
-    // 1. Any URL containing 'v=' query param (e.g. watch?v=..., playlist?v=..., etc.)
     const vMatch = clean.match(/[?&]v=([a-zA-Z0-9_-]{11})/i);
     if (vMatch && vMatch[1]) return vMatch[1];
 
-    // 2. Short links: youtu.be/VIDEO_ID or youtu.be/VIDEO_ID?list=...
     const shortMatch = clean.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/i);
     if (shortMatch && shortMatch[1]) return shortMatch[1];
 
-    // 3. Path links: /embed/ID, /shorts/ID, /live/ID, /v/ID
     const pathMatch = clean.match(/\/(?:embed|shorts|live|v)\/([a-zA-Z0-9_-]{11})/i);
     if (pathMatch && pathMatch[1]) return pathMatch[1];
 
-    // 4. Raw 11-character video ID directly entered
     if (/^[a-zA-Z0-9_-]{11}$/.test(clean)) return clean;
 
     return null;
   }
 
-  /**
-   * Extracts YouTube Playlist ID from list= query parameter
-   */
   extractYouTubePlaylistId(rawUrl) {
     if (!rawUrl || typeof rawUrl !== 'string') return null;
     const match = rawUrl.trim().match(/[?&]list=([a-zA-Z0-9_-]+)/i);
     return match && match[1] ? match[1] : null;
   }
 
+  extractDomain(rawUrl) {
+    if (!rawUrl) return '';
+    try {
+      const parsed = new URL(rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`);
+      return parsed.hostname.replace(/^www\./, '');
+    } catch (e) {
+      return '';
+    }
+  }
+
   /**
-   * Resolves the cover thumbnail according to strict priority:
-   * 1. Custom Cover Image URL (takes top precedence)
-   * 2. Auto YouTube Video Thumbnail (hqdefault.jpg)
-   * 3. Default generic placeholder (url: null)
+   * Resolves item media: YouTube maxresdefault with fallback, domain favicon, or monogram placeholder
    */
-  resolveCoverThumbnail(item) {
-    if (!item) return { url: null, isCustom: false };
+  resolveItemMedia(item) {
+    if (!item) return { url: null, type: 'none' };
     const custom = (item.customThumbnailUrl || item.customCoverUrl || '').trim();
     if (custom) {
-      return { url: custom, isCustom: true };
+      return { url: custom, isCustom: true, type: 'custom' };
     }
 
     const videoId = item.videoId || this.extractYouTubeVideoId(item.url);
     if (videoId) {
-      return { url: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`, isCustom: false };
+      return {
+        url: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+        fallbackUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+        isCustom: false,
+        type: 'youtube',
+        videoId: videoId
+      };
     }
 
-    return { url: null, isCustom: false };
+    const domain = this.extractDomain(item.url);
+    if (domain) {
+      return {
+        url: `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128`,
+        domain: domain,
+        initial: (item.title || domain || 'CV').charAt(0).toUpperCase(),
+        isCustom: false,
+        type: 'website'
+      };
+    }
+
+    return {
+      url: null,
+      initial: (item.title || 'CV').charAt(0).toUpperCase(),
+      isCustom: false,
+      type: 'placeholder'
+    };
   }
 
-  /**
-   * Reads and compresses a local image file using an offscreen HTML canvas.
-   * Scales image down to maxWidth (~640px) proportionally and outputs a base64 JPEG string at quality ~0.7.
-   * @param {File} file - Selected image file (.jpg, .png, .webp)
-   * @param {number} maxWidth - Maximum width in pixels (default: 640)
-   * @param {number} quality - JPEG compression quality (default: 0.7)
-   * @returns {Promise<string>} Base64 data URL
-   */
   compressImageFile(file, maxWidth = 640, quality = 0.7) {
     return new Promise((resolve, reject) => {
       if (!file || !file.type.startsWith('image/')) {
@@ -365,7 +480,6 @@ class CourseVaultApp {
           let width = img.width;
           let height = img.height;
 
-          // Proportionally constrain to maxWidth (~640px)
           if (width > maxWidth) {
             height = Math.round((height * maxWidth) / width);
             width = maxWidth;
@@ -376,8 +490,7 @@ class CourseVaultApp {
           canvas.height = height;
 
           const ctx = canvas.getContext('2d');
-          // Fill background for transparency safety in dark theme
-          ctx.fillStyle = '#0b0f17';
+          ctx.fillStyle = '#0B0D11';
           ctx.fillRect(0, 0, width, height);
           ctx.drawImage(img, 0, 0, width, height);
 
@@ -391,112 +504,129 @@ class CourseVaultApp {
         img.onerror = () => reject(new Error('Failed to parse image data'));
         img.src = e.target.result;
       };
-      reader.onerror = () => reject(new Error('Failed to read file from device'));
+      reader.onerror = () => reject(new Error('Failed to read file'));
       reader.readAsDataURL(file);
     });
   }
 
-  /**
-   * Resets local file upload state for cover image
-   */
-  clearUploadedFileCover() {
-    if (this.courseCoverFileInput) this.courseCoverFileInput.value = '';
-    if (this.fileBadgeInfo) this.fileBadgeInfo.classList.add('hidden');
-    if (this.coverUploadBtnText) this.coverUploadBtnText.textContent = 'Upload Cover Image from Device';
-    if (this.courseThumbnailInput && this.courseThumbnailInput.value.startsWith('data:image/')) {
-      this.courseThumbnailInput.value = '';
-    }
-    this.updateThumbnailPreview();
-  }
+  normalizeUrl(rawUrl) {
+    if (!rawUrl) return { normalized: '', isYouTube: false };
+    const clean = rawUrl.trim();
+    const videoId = this.extractYouTubeVideoId(clean);
+    const playlistId = this.extractYouTubePlaylistId(clean);
 
-  /**
-   * Generates high-quality YouTube thumbnail or custom cover URL
-   */
-  getThumbnailUrl(videoId, customUrl = '') {
-    if (customUrl && typeof customUrl === 'string' && customUrl.trim()) {
-      return customUrl.trim();
+    if (videoId && playlistId) {
+      return { normalized: `https://www.youtube.com/watch?v=${videoId}&list=${playlistId}`, isYouTube: true };
     }
     if (videoId) {
-      return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+      return { normalized: `https://www.youtube.com/watch?v=${videoId}`, isYouTube: true };
     }
-    return '';
+    if (playlistId) {
+      return { normalized: `https://www.youtube.com/playlist?list=${playlistId}`, isYouTube: true };
+    }
+    return { normalized: clean, isYouTube: false };
   }
 
-  /**
-   * Normalizes incoming URLs by:
-   * 1. Stripping tracking parameters (si, t, utm_*, fbclid, etc.)
-   * 2. Canonicalizing YouTube desktop vs mobile vs shortlinks
-   * 3. Retaining clean videoId and playlistId
-   */
-  normalizeUrl(rawUrl) {
-    if (!rawUrl || typeof rawUrl !== 'string') {
-      return { normalized: '', videoId: null, playlistId: null, isYouTube: false };
-    }
-
+  findDuplicateCourse(rawUrl, excludeId = null) {
+    if (!rawUrl) return null;
+    const { normalized } = this.normalizeUrl(rawUrl);
     const videoId = this.extractYouTubeVideoId(rawUrl);
     const playlistId = this.extractYouTubePlaylistId(rawUrl);
 
-    if (videoId) {
-      // Standardize to canonical YouTube watch link
-      const norm = playlistId
-        ? `https://www.youtube.com/watch?v=${videoId}&list=${playlistId}`
-        : `https://www.youtube.com/watch?v=${videoId}`;
-      return {
-        normalized: norm,
-        videoId: videoId,
-        playlistId: playlistId,
-        isYouTube: true
-      };
-    }
-
-    if (playlistId) {
-      // Pure playlist link
-      return {
-        normalized: `https://www.youtube.com/playlist?list=${playlistId}`,
-        videoId: null,
-        playlistId: playlistId,
-        isYouTube: true
-      };
-    }
-
-    // Generic / Non-YouTube URLs: strip tracking query params
-    let trimmed = rawUrl.trim();
-    if (!/^https?:\/\//i.test(trimmed)) trimmed = 'https://' + trimmed;
-    try {
-      const parsed = new URL(trimmed);
-      const trackingParams = ['si', 't', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'fbclid', 'gclid'];
-      trackingParams.forEach((param) => parsed.searchParams.delete(param));
-      
-      let cleanHref = parsed.origin + parsed.pathname.replace(/\/+$/, '');
-      if (parsed.search) cleanHref += parsed.search;
-
-      return {
-        normalized: cleanHref,
-        videoId: null,
-        playlistId: null,
-        isYouTube: false
-      };
-    } catch (e) {
-      return { normalized: trimmed, videoId: null, playlistId: null, isYouTube: false };
-    }
-  }
-
-  /**
-   * Checks if a normalized link already exists in storage.
-   * If excludeId is provided, ignores that course (used when editing).
-   */
-  findDuplicateCourse(rawUrl, excludeId = null) {
-    const { normalized } = this.normalizeUrl(rawUrl);
-    if (!normalized) return null;
-
-    return this.courses.find(c => {
-      if (excludeId && c.id === excludeId) return false;
-      return c.normalizedUrl.toLowerCase() === normalized.toLowerCase();
+    return this.courses.find(course => {
+      if (excludeId && course.id === excludeId) return false;
+      if (course.normalizedUrl && normalized && course.normalizedUrl.toLowerCase() === normalized.toLowerCase()) {
+        return true;
+      }
+      if (videoId && course.videoId && course.videoId === videoId) {
+        return true;
+      }
+      if (playlistId && course.playlistId && course.playlistId === playlistId) {
+        return true;
+      }
+      return false;
     }) || null;
   }
 
   // ==========================================================================
-  // 4. DOM Bindings & Event Listeners
+  // 4. Lecture Tracker & Progress Engine
+  // ==========================================================================
+
+  calculateCourseProgress(course) {
+    if (course.lectures && course.lectures.length > 0) {
+      const done = course.lectures.filter(l => l.completed).length;
+      const pct = Math.round((done / course.lectures.length) * 100);
+      return {
+        pct: pct,
+        done: done,
+        total: course.lectures.length,
+        hasLectures: true
+      };
+    }
+    const pct = course.status === 'Completed' ? 100 : (course.status === 'In Progress' ? 50 : 0);
+    return {
+      pct: pct,
+      done: 0,
+      total: 0,
+      hasLectures: false
+    };
+  }
+
+  toggleLecture(courseId, lectureId, isCompleted) {
+    const course = this.courses.find(c => c.id === courseId);
+    if (!course || !course.lectures) return;
+
+    const lecture = course.lectures.find(l => l.id === lectureId);
+    if (!lecture) return;
+
+    lecture.completed = isCompleted;
+
+    const progress = this.calculateCourseProgress(course);
+    if (progress.pct === 100 && course.status !== 'Completed') {
+      course.status = 'Completed';
+      this.showToast(`🎉 100% Completed! All lectures finished for "${course.title}".`, 'success');
+    } else if (progress.pct > 0 && progress.pct < 100 && course.status === 'Want to Learn') {
+      course.status = 'In Progress';
+    }
+
+    this.saveCourses();
+    this.render();
+  }
+
+  addLecture(courseId, title, linkUrl = '', notes = '') {
+    const course = this.courses.find(c => c.id === courseId);
+    if (!course) return;
+
+    if (!Array.isArray(course.lectures)) {
+      course.lectures = [];
+    }
+
+    const newLecture = {
+      id: 'lec-' + Date.now(),
+      title: title.trim(),
+      linkUrl: linkUrl.trim(),
+      notes: notes.trim(),
+      completed: false
+    };
+
+    course.lectures.push(newLecture);
+    this.saveCourses();
+    this.render();
+    this.showToast(`Lecture added to "${course.title}"`, 'success');
+  }
+
+  deleteLecture(courseId, lectureId) {
+    const course = this.courses.find(c => c.id === courseId);
+    if (!course || !course.lectures) return;
+
+    course.lectures = course.lectures.filter(l => l.id !== lectureId);
+    this.saveCourses();
+    this.render();
+    this.showToast('Lecture removed', 'info');
+  }
+
+  // ==========================================================================
+  // 5. DOM Binding & Event Listeners
   // ==========================================================================
 
   bindDomElements() {
@@ -511,12 +641,9 @@ class CourseVaultApp {
     this.installPwaBtn = document.getElementById('installPwaBtn');
     this.backupModalBtn = document.getElementById('backupModalBtn');
 
-    // Primary View Switching
-    this.navAllCourses = document.getElementById('navAllCourses');
-    this.navTools = document.getElementById('navTools');
-    this.countTools = document.getElementById('countTools');
-    this.coursesViewPanel = document.getElementById('coursesViewPanel');
-    this.toolsViewPanel = document.getElementById('toolsViewPanel');
+    // Dynamic Workspaces Container & Add Button
+    this.workspacesNavList = document.getElementById('workspacesNavList');
+    this.openAddWorkspaceBtn = document.getElementById('openAddWorkspaceBtn');
 
     // Mobile Bottom Bar
     this.mobileNavChannelsBtn = document.getElementById('mobileNavChannelsBtn');
@@ -532,13 +659,17 @@ class CourseVaultApp {
     this.countCompleted = document.getElementById('countCompleted');
     this.inlineAddCategoryBtn = document.getElementById('inlineAddCategoryBtn');
     this.sidebarAddCatBtn = document.getElementById('sidebarAddCatBtn');
+    this.openManageCategoriesBtn = document.getElementById('openManageCategoriesBtn');
     this.sidebarBackupBtn = document.getElementById('sidebarBackupBtn');
 
-    // Main Content (Courses)
+    // Main Content
+    this.coursesViewPanel = document.getElementById('coursesViewPanel');
+    this.toolsViewPanel = document.getElementById('toolsViewPanel');
     this.activeCategoryTitle = document.getElementById('activeCategoryTitle');
     this.activeFilterCount = document.getElementById('activeFilterCount');
     this.statusTabsContainer = document.getElementById('statusTabsContainer');
     this.sortSelect = document.getElementById('sortSelect');
+    this.viewModeSwitcher = document.getElementById('viewModeSwitcher');
     this.coursesGrid = document.getElementById('coursesGrid');
     this.emptyState = document.getElementById('emptyState');
     this.emptyTitle = document.getElementById('emptyTitle');
@@ -564,6 +695,7 @@ class CourseVaultApp {
     this.courseForm = document.getElementById('courseForm');
     this.courseModalTitle = document.getElementById('courseModalTitle');
     this.courseEditId = document.getElementById('courseEditId');
+    this.courseSectionSelect = document.getElementById('courseSectionSelect');
     this.courseTitleInput = document.getElementById('courseTitleInput');
     this.courseUrlInput = document.getElementById('courseUrlInput');
     this.courseCategorySelect = document.getElementById('courseCategorySelect');
@@ -592,12 +724,36 @@ class CourseVaultApp {
     this.toolForm = document.getElementById('toolForm');
     this.toolModalTitle = document.getElementById('toolModalTitle');
     this.toolEditId = document.getElementById('toolEditId');
+    this.toolSectionSelect = document.getElementById('toolSectionSelect');
     this.toolNameInput = document.getElementById('toolNameInput');
     this.toolUrlInput = document.getElementById('toolUrlInput');
     this.toolCategoryInput = document.getElementById('toolCategoryInput');
     this.toolQuickCategoryChips = document.getElementById('toolQuickCategoryChips');
     this.toolDescriptionInput = document.getElementById('toolDescriptionInput');
     this.saveToolBtnText = document.getElementById('saveToolBtnText');
+
+    // Workspace Modal
+    this.workspaceModalOverlay = document.getElementById('workspaceModalOverlay');
+    this.closeWorkspaceModalBtn = document.getElementById('closeWorkspaceModalBtn');
+    this.cancelWorkspaceBtn = document.getElementById('cancelWorkspaceBtn');
+    this.workspaceForm = document.getElementById('workspaceForm');
+    this.workspaceModalTitle = document.getElementById('workspaceModalTitle');
+    this.workspaceEditId = document.getElementById('workspaceEditId');
+    this.workspaceTitleInput = document.getElementById('workspaceTitleInput');
+    this.workspaceShortNameInput = document.getElementById('workspaceShortNameInput');
+    this.workspaceDescInput = document.getElementById('workspaceDescInput');
+    this.workspaceIconPicker = document.getElementById('workspaceIconPicker');
+    this.workspaceSelectedIcon = document.getElementById('workspaceSelectedIcon');
+    this.deleteWorkspaceBtn = document.getElementById('deleteWorkspaceBtn');
+
+    // Manage Categories Modal
+    this.manageCategoriesModalOverlay = document.getElementById('manageCategoriesModalOverlay');
+    this.closeManageCategoriesModalBtn = document.getElementById('closeManageCategoriesModalBtn');
+    this.closeManageCategoriesFooterBtn = document.getElementById('closeManageCategoriesFooterBtn');
+    this.manageCategoriesList = document.getElementById('manageCategoriesList');
+    this.inlineCategoryForm = document.getElementById('inlineCategoryForm');
+    this.manageNewCatName = document.getElementById('manageNewCatName');
+    this.manageNewCatColor = document.getElementById('manageNewCatColor');
 
     // Category Modal
     this.categoryModalOverlay = document.getElementById('categoryModalOverlay');
@@ -622,7 +778,6 @@ class CourseVaultApp {
     this.deleteConfirmModal = document.getElementById('deleteConfirmModal');
     this.deleteModalTitle = document.getElementById('deleteModalTitle');
     this.deleteItemTitle = document.getElementById('deleteItemTitle');
-    this.deleteCourseTitle = document.getElementById('deleteCourseTitle');
     this.cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
     this.confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
 
@@ -631,49 +786,69 @@ class CourseVaultApp {
   }
 
   setupEventListeners() {
-    // Mobile Drawer Toggling
+    // Drawer
     const toggleDrawer = () => {
       const isOpen = this.sidebarChannels.classList.contains('open');
-      if (isOpen) {
-        this.closeDrawer();
-      } else {
-        this.openDrawer();
-      }
+      if (isOpen) this.closeDrawer();
+      else this.openDrawer();
     };
 
     if (this.mobileMenuBtn) this.mobileMenuBtn.addEventListener('click', toggleDrawer);
+    if (this.drawerBackdrop) this.drawerBackdrop.addEventListener('click', () => this.closeDrawer());
+
+    // Mobile Bottom Navigation
     if (this.mobileNavChannelsBtn) {
       this.mobileNavChannelsBtn.addEventListener('click', () => {
-        this.switchView('courses');
+        this.switchWorkspace('courses');
       });
     }
     if (this.mobileNavToolsBtn) {
       this.mobileNavToolsBtn.addEventListener('click', () => {
-        this.switchView('tools');
-      });
-    }
-    if (this.drawerBackdrop) this.drawerBackdrop.addEventListener('click', () => this.closeDrawer());
-
-    // Primary View Switching (Sidebar)
-    if (this.navAllCourses) {
-      this.navAllCourses.addEventListener('click', (e) => {
-        e.preventDefault();
-        this.activeCategoryFilter = 'all';
-        this.activeStatusFilter = 'all';
-        this.switchView('courses');
-        this.closeDrawer();
+        this.switchWorkspace('tools');
       });
     }
 
-    if (this.navTools) {
-      this.navTools.addEventListener('click', (e) => {
-        e.preventDefault();
-        this.switchView('tools');
-        this.closeDrawer();
+    // View Mode Switcher
+    if (this.viewModeSwitcher) {
+      this.viewModeSwitcher.addEventListener('click', (e) => {
+        const btn = e.target.closest('.view-mode-btn');
+        if (!btn || !btn.dataset.viewMode) return;
+        this.setViewMode(btn.dataset.viewMode);
       });
     }
 
-    // Search Input
+    // Workspaces
+    if (this.openAddWorkspaceBtn) {
+      this.openAddWorkspaceBtn.addEventListener('click', () => this.openWorkspaceModal());
+    }
+    if (this.closeWorkspaceModalBtn) {
+      this.closeWorkspaceModalBtn.addEventListener('click', () => this.closeWorkspaceModal());
+    }
+    if (this.cancelWorkspaceBtn) {
+      this.cancelWorkspaceBtn.addEventListener('click', () => this.closeWorkspaceModal());
+    }
+    if (this.workspaceForm) {
+      this.workspaceForm.addEventListener('submit', (e) => this.handleWorkspaceSubmit(e));
+    }
+    if (this.deleteWorkspaceBtn) {
+      this.deleteWorkspaceBtn.addEventListener('click', () => this.handleDeleteWorkspace());
+    }
+
+    // Manage Categories
+    if (this.openManageCategoriesBtn) {
+      this.openManageCategoriesBtn.addEventListener('click', () => this.openManageCategoriesModal());
+    }
+    if (this.closeManageCategoriesModalBtn) {
+      this.closeManageCategoriesModalBtn.addEventListener('click', () => this.closeManageCategoriesModal());
+    }
+    if (this.closeManageCategoriesFooterBtn) {
+      this.closeManageCategoriesFooterBtn.addEventListener('click', () => this.closeManageCategoriesModal());
+    }
+    if (this.inlineCategoryForm) {
+      this.inlineCategoryForm.addEventListener('submit', (e) => this.handleInlineCategorySubmit(e));
+    }
+
+    // Search
     const executeSearch = (val) => {
       this.searchQuery = val.trim().toLowerCase();
       if (this.searchQuery) {
@@ -681,39 +856,30 @@ class CourseVaultApp {
       } else {
         this.clearSearchBtn.classList.add('hidden');
       }
-      if (this.activeView === 'tools') {
+      if (this.activeSectionId === 'tools') {
         this.renderTools();
       } else {
         this.renderCourses();
       }
     };
 
-    this.searchInput.addEventListener('input', (e) => executeSearch(e.target.value));
-    this.searchInput.addEventListener('search', () => executeSearch(this.searchInput.value));
+    if (this.searchInput) {
+      this.searchInput.addEventListener('input', (e) => executeSearch(e.target.value));
+      this.searchInput.addEventListener('search', () => executeSearch(this.searchInput.value));
+    }
 
-    this.clearSearchBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      this.searchInput.value = '';
-      executeSearch('');
-      this.searchInput.focus();
-    });
-
-    // PWA Install Button
-    if (this.installPwaBtn) {
-      this.installPwaBtn.addEventListener('click', async () => {
-        if (!this.deferredInstallPrompt) return;
-        this.deferredInstallPrompt.prompt();
-        const { outcome } = await this.deferredInstallPrompt.userChoice;
-        if (outcome === 'accepted') {
-          this.installPwaBtn.classList.add('hidden');
-        }
-        this.deferredInstallPrompt = null;
+    if (this.clearSearchBtn) {
+      this.clearSearchBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.searchInput.value = '';
+        executeSearch('');
+        this.searchInput.focus();
       });
     }
 
-    // Modal Triggers: Add Course or Tool (Context-Aware)
+    // Context-Aware Add Button
     const handleAddItem = () => {
-      if (this.activeView === 'tools') {
+      if (this.activeSectionId === 'tools') {
         this.openToolModal();
       } else {
         this.openCourseModal();
@@ -725,15 +891,16 @@ class CourseVaultApp {
     if (this.openAddToolBtn) this.openAddToolBtn.addEventListener('click', () => this.openToolModal());
     if (this.toolsEmptyAddBtn) this.toolsEmptyAddBtn.addEventListener('click', () => this.openToolModal());
 
-    this.closeCourseModalBtn.addEventListener('click', () => this.closeCourseModal());
-    this.cancelCourseBtn.addEventListener('click', () => this.closeCourseModal());
+    // Course Modal
+    if (this.closeCourseModalBtn) this.closeCourseModalBtn.addEventListener('click', () => this.closeCourseModal());
+    if (this.cancelCourseBtn) this.cancelCourseBtn.addEventListener('click', () => this.closeCourseModal());
+    if (this.courseForm) this.courseForm.addEventListener('submit', (e) => this.handleCourseSubmit(e));
 
-    // Tool Modal Actions
+    // Tool Modal
     if (this.closeToolModalBtn) this.closeToolModalBtn.addEventListener('click', () => this.closeToolModal());
     if (this.cancelToolBtn) this.cancelToolBtn.addEventListener('click', () => this.closeToolModal());
     if (this.toolForm) this.toolForm.addEventListener('submit', (e) => this.handleToolSubmit(e));
 
-    // Tool Modal Quick Category Chips
     if (this.toolQuickCategoryChips) {
       this.toolQuickCategoryChips.addEventListener('click', (e) => {
         const chip = e.target.closest('.chip-item');
@@ -755,37 +922,59 @@ class CourseVaultApp {
       });
     }
 
-    // Modal Triggers: New Category
+    // New Category Modal
     const openAddCat = () => this.openCategoryModal();
     if (this.inlineAddCategoryBtn) this.inlineAddCategoryBtn.addEventListener('click', openAddCat);
     if (this.sidebarAddCatBtn) this.sidebarAddCatBtn.addEventListener('click', openAddCat);
     if (this.inlineAddCategoryTriggerBtn) this.inlineAddCategoryTriggerBtn.addEventListener('click', openAddCat);
+    if (this.closeCategoryModalBtn) this.closeCategoryModalBtn.addEventListener('click', () => this.closeCategoryModal());
+    if (this.cancelCategoryBtn) this.cancelCategoryBtn.addEventListener('click', () => this.closeCategoryModal());
+    if (this.categoryForm) this.categoryForm.addEventListener('submit', (e) => this.handleCategorySubmit(e));
 
-    this.closeCategoryModalBtn.addEventListener('click', () => this.closeCategoryModal());
-    this.cancelCategoryBtn.addEventListener('click', () => this.closeCategoryModal());
-
-    // Modal Triggers: Backup & Restore
+    // Backup & Restore
     const openBackup = () => this.openBackupModal();
     if (this.backupModalBtn) this.backupModalBtn.addEventListener('click', openBackup);
     if (this.mobileNavBackupBtn) this.mobileNavBackupBtn.addEventListener('click', openBackup);
     if (this.sidebarBackupBtn) this.sidebarBackupBtn.addEventListener('click', openBackup);
+    if (this.closeBackupModalBtn) this.closeBackupModalBtn.addEventListener('click', () => this.closeBackupModal());
+    if (this.closeBackupFooterBtn) this.closeBackupFooterBtn.addEventListener('click', () => this.closeBackupModal());
+    if (this.exportJsonBtn) this.exportJsonBtn.addEventListener('click', () => this.exportBackupJson());
+    if (this.importDropzone) this.importDropzone.addEventListener('click', () => this.importFileInput.click());
+    if (this.importFileInput) this.importFileInput.addEventListener('change', (e) => this.handleImportFile(e));
 
-    this.closeBackupModalBtn.addEventListener('click', () => this.closeBackupModal());
-    this.closeBackupFooterBtn.addEventListener('click', () => this.closeBackupModal());
+    if (this.importDropzone) {
+      this.importDropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        this.importDropzone.classList.add('dragover');
+      });
+      this.importDropzone.addEventListener('dragleave', () => {
+        this.importDropzone.classList.remove('dragover');
+      });
+      this.importDropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        this.importDropzone.classList.remove('dragover');
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+          this.processImportJson(e.dataTransfer.files[0]);
+        }
+      });
+    }
 
-    // Live Duplicate URL Detection & Thumbnail Preview in Form
+    if (this.loadSampleDataBtn) this.loadSampleDataBtn.addEventListener('click', () => this.loadSampleData());
+    if (this.clearAllDataBtn) this.clearAllDataBtn.addEventListener('click', () => this.clearAllData());
+
+    // Live URL Detection & Thumbnail Preview
     const handleUrlChange = () => {
       this.checkLiveDuplicate();
       this.updateThumbnailPreview();
     };
-    this.courseUrlInput.addEventListener('input', handleUrlChange);
-    this.courseUrlInput.addEventListener('paste', () => setTimeout(handleUrlChange, 50));
+    if (this.courseUrlInput) {
+      this.courseUrlInput.addEventListener('input', handleUrlChange);
+      this.courseUrlInput.addEventListener('paste', () => setTimeout(handleUrlChange, 50));
+    }
 
-    // Custom Cover URL Input Listener
     if (this.courseThumbnailInput) {
       const handleCustomUrlChange = () => {
         const val = this.courseThumbnailInput.value.trim();
-        // If user typed/pasted a regular web URL, reset any local file upload state
         if (val && !val.startsWith('data:image/')) {
           if (this.courseCoverFileInput) this.courseCoverFileInput.value = '';
           if (this.fileBadgeInfo) this.fileBadgeInfo.classList.add('hidden');
@@ -797,13 +986,11 @@ class CourseVaultApp {
       this.courseThumbnailInput.addEventListener('paste', () => setTimeout(handleCustomUrlChange, 50));
     }
 
-    // Local Device File Upload Listener (FileReader + Offscreen Canvas Compression)
     if (this.courseCoverFileInput) {
       this.courseCoverFileInput.addEventListener('change', async (e) => {
         const file = e.target.files && e.target.files[0];
         if (!file) return;
 
-        // Verify valid image MIME type or extension
         if (!file.type.match(/^image\/(jpeg|png|webp|jpg)$/i) && !file.name.match(/\.(jpe?g|png|webp)$/i)) {
           this.showToast('Please select a valid image file (.jpg, .png, .webp).', 'warning');
           this.courseCoverFileInput.value = '';
@@ -812,44 +999,25 @@ class CourseVaultApp {
 
         try {
           if (this.coverUploadBtnText) this.coverUploadBtnText.textContent = 'Optimizing image...';
-          
-          // Compress using offscreen HTML canvas (max width 640px, JPEG quality 0.7)
           const compressedBase64 = await this.compressImageFile(file, 640, 0.7);
 
-          // Populate the custom thumbnail field with Base64 data URL
-          if (this.courseThumbnailInput) {
-            this.courseThumbnailInput.value = compressedBase64;
-          }
-
-          // Compute size details for user confirmation
-          const originalKb = Math.round(file.size / 1024);
+          if (this.courseThumbnailInput) this.courseThumbnailInput.value = compressedBase64;
           const compressedKb = Math.round((compressedBase64.length * 3 / 4) / 1024);
 
-          // Update UI badge
-          if (this.fileBadgeText) {
-            this.fileBadgeText.textContent = `${file.name} (~${compressedKb} KB)`;
-          }
-          if (this.fileBadgeInfo) {
-            this.fileBadgeInfo.classList.remove('hidden');
-          }
-          if (this.coverUploadBtnText) {
-            this.coverUploadBtnText.textContent = 'Change Uploaded Image';
-          }
+          if (this.fileBadgeText) this.fileBadgeText.textContent = `${file.name} (~${compressedKb} KB)`;
+          if (this.fileBadgeInfo) this.fileBadgeInfo.classList.remove('hidden');
+          if (this.coverUploadBtnText) this.coverUploadBtnText.textContent = 'Change Uploaded Image';
 
-          // Live thumbnail preview updates immediately
           this.updateThumbnailPreview();
-          this.showToast(`Cover loaded & compressed (${originalKb} KB → ~${compressedKb} KB)`, 'success');
+          this.showToast(`Cover loaded & optimized (~${compressedKb} KB)`, 'success');
         } catch (err) {
           console.error('[CourseVault] File upload conversion failed:', err);
           this.showToast('Could not process this image file.', 'danger');
-          if (this.coverUploadBtnText) {
-            this.coverUploadBtnText.textContent = 'Upload Cover Image from Device';
-          }
+          if (this.coverUploadBtnText) this.coverUploadBtnText.textContent = 'Upload Cover Image from Device';
         }
       });
     }
 
-    // Remove uploaded file cover button
     if (this.removeFileCoverBtn) {
       this.removeFileCoverBtn.addEventListener('click', () => {
         this.clearUploadedFileCover();
@@ -857,120 +1025,53 @@ class CourseVaultApp {
       });
     }
 
-    // Reset Custom Cover to Auto YouTube Thumbnail
     if (this.clearCustomCoverBtn) {
       this.clearCustomCoverBtn.addEventListener('click', () => {
         this.clearUploadedFileCover();
         if (this.courseThumbnailInput) this.courseThumbnailInput.value = '';
         this.updateThumbnailPreview();
-        this.showToast('Reset to automatic YouTube thumbnail', 'info');
+        this.showToast('Reset to automatic preview', 'info');
       });
     }
 
-    // Course Form Submit
-    this.courseForm.addEventListener('submit', (e) => this.handleCourseSubmit(e));
+    // Status Tabs
+    if (this.statusTabsContainer) {
+      this.statusTabsContainer.addEventListener('click', (e) => {
+        const tab = e.target.closest('.status-tab');
+        if (!tab) return;
+        this.statusTabsContainer.querySelectorAll('.status-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        this.activeStatusFilter = tab.dataset.tabStatus;
+        this.renderCourses();
+      });
+    }
 
-    // Category Form Submit
-    this.categoryForm.addEventListener('submit', (e) => this.handleCategorySubmit(e));
-
-    // Status Filter Tabs
-    this.statusTabsContainer.addEventListener('click', (e) => {
-      const tab = e.target.closest('.status-tab');
-      if (!tab) return;
-      this.statusTabsContainer.querySelectorAll('.status-tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      this.activeStatusFilter = tab.dataset.tabStatus;
-      this.renderCourses();
-    });
-
-    // Sort Select
-    this.sortSelect.addEventListener('change', (e) => {
-      this.sortOption = e.target.value;
-      this.renderCourses();
-    });
+    // Sort
+    if (this.sortSelect) {
+      this.sortSelect.addEventListener('change', (e) => {
+        this.sortOption = e.target.value;
+        this.renderCourses();
+      });
+    }
 
     // Reset Filters from Empty State
-    this.emptyResetFilterBtn.addEventListener('click', () => {
-      this.activeCategoryFilter = 'all';
-      this.activeStatusFilter = 'all';
-      this.searchQuery = '';
-      this.searchInput.value = '';
-      this.clearSearchBtn.classList.add('hidden');
-      this.statusTabsContainer.querySelectorAll('.status-tab').forEach(t => {
-        t.classList.toggle('active', t.dataset.tabStatus === 'all');
-      });
-      this.render();
-    });
-
-    // Sidebar Channel Clicks
-    this.sidebarChannels.addEventListener('click', (e) => {
-      const channelBtn = e.target.closest('.channel-item, .cat-channel-item');
-      if (!channelBtn) return;
-
-      if (channelBtn.dataset.category) {
-        this.activeCategoryFilter = channelBtn.dataset.category;
-        if (this.activeView !== 'courses') {
-          this.switchView('courses');
-        }
-      } else if (channelBtn.dataset.statusFilter) {
-        this.activeStatusFilter = channelBtn.dataset.statusFilter;
+    if (this.emptyResetFilterBtn) {
+      this.emptyResetFilterBtn.addEventListener('click', () => {
+        this.activeCategoryFilter = 'all';
+        this.activeStatusFilter = 'all';
+        this.searchQuery = '';
+        this.searchInput.value = '';
+        this.clearSearchBtn.classList.add('hidden');
         this.statusTabsContainer.querySelectorAll('.status-tab').forEach(t => {
-          t.classList.toggle('active', t.dataset.tabStatus === this.activeStatusFilter);
+          t.classList.toggle('active', t.dataset.tabStatus === 'all');
         });
-        if (this.activeView !== 'courses') {
-          this.switchView('courses');
-        }
-      }
-
-      this.closeDrawer();
-      this.render();
-    });
+        this.render();
+      });
+    }
 
     // Delete Modal
-    this.cancelDeleteBtn.addEventListener('click', () => this.closeDeleteModal());
-    this.confirmDeleteBtn.addEventListener('click', () => this.handleConfirmDelete());
-
-    // Backup & Restore Handlers
-    this.exportJsonBtn.addEventListener('click', () => this.exportBackupJson());
-    this.importDropzone.addEventListener('click', () => this.importFileInput.click());
-    this.importFileInput.addEventListener('change', (e) => this.handleImportFile(e));
-
-    // Drag and Drop on Import Dropzone
-    this.importDropzone.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      this.importDropzone.classList.add('dragover');
-    });
-    this.importDropzone.addEventListener('dragleave', () => {
-      this.importDropzone.classList.remove('dragover');
-    });
-    this.importDropzone.addEventListener('drop', (e) => {
-      e.preventDefault();
-      this.importDropzone.classList.remove('dragover');
-      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-        this.processImportJson(e.dataTransfer.files[0]);
-      }
-    });
-
-    // Sample Demo & Clear Data Handlers
-    if (this.loadSampleDataBtn) {
-      this.loadSampleDataBtn.addEventListener('click', () => this.loadSampleData());
-    }
-    if (this.clearAllDataBtn) {
-      this.clearAllDataBtn.addEventListener('click', () => this.clearAllData());
-    }
-
-    // Tools Reset Filter Button from Empty State
-    if (this.toolsResetFilterBtn) {
-      this.toolsResetFilterBtn.addEventListener('click', () => {
-        this.activeToolCategory = 'all';
-        if (this.toolsCategoryTabs) {
-          this.toolsCategoryTabs.querySelectorAll('.tools-tab').forEach(t => {
-            t.classList.toggle('active', t.dataset.toolCategory === 'all');
-          });
-        }
-        this.renderTools();
-      });
-    }
+    if (this.cancelDeleteBtn) this.cancelDeleteBtn.addEventListener('click', () => this.closeDeleteModal());
+    if (this.confirmDeleteBtn) this.confirmDeleteBtn.addEventListener('click', () => this.handleConfirmDelete());
   }
 
   openDrawer() {
@@ -984,7 +1085,379 @@ class CourseVaultApp {
   }
 
   // ==========================================================================
-  // 5. Course CRUD Operations
+  // 6. View Mode Switching
+  // ==========================================================================
+
+  setViewMode(mode) {
+    if (!['grid', 'compact', 'list'].includes(mode)) return;
+    this.viewMode = mode;
+    this.saveViewMode();
+
+    if (this.viewModeSwitcher) {
+      this.viewModeSwitcher.querySelectorAll('.view-mode-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.viewMode === mode);
+      });
+    }
+
+    if (this.coursesGrid) {
+      this.coursesGrid.classList.remove('view-mode-grid', 'view-mode-compact', 'view-mode-list');
+      this.coursesGrid.classList.add(`view-mode-${mode}`);
+    }
+
+    this.renderCourses();
+  }
+
+  // ==========================================================================
+  // 7. Workspace Management (Dynamic Sections)
+  // ==========================================================================
+
+  renderWorkspacesNav() {
+    if (!this.workspacesNavList) return;
+    this.workspacesNavList.innerHTML = '';
+
+    this.sections.forEach(sec => {
+      const btn = document.createElement('button');
+      const isActive = this.activeSectionId === sec.id;
+      btn.className = `workspace-nav-item ${isActive ? 'active' : ''}`;
+      btn.dataset.sectionId = sec.id;
+
+      // Count items in this workspace
+      let count = 0;
+      if (sec.id === 'tools') {
+        count = this.tools.length;
+      } else {
+        count = this.courses.filter(c => (c.sectionId || 'courses') === sec.id).length;
+      }
+
+      btn.innerHTML = `
+        <span class="workspace-icon">${getWorkspaceIconSvg(sec.icon || 'folder', 16)}</span>
+        <span class="workspace-name">${escapeHtml(sec.shortName || sec.title)}</span>
+        <span class="badge ${sec.id === 'tools' ? 'badge-tools' : ''}">${count}</span>
+        ${!sec.isDefault ? `<span class="workspace-actions"><button type="button" class="workspace-action-btn edit-sec" title="Edit Workspace"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg></button></span>` : ''}
+      `;
+
+      btn.addEventListener('click', (e) => {
+        const editBtn = e.target.closest('.edit-sec');
+        if (editBtn) {
+          e.stopPropagation();
+          this.openWorkspaceModal(sec);
+          return;
+        }
+        this.switchWorkspace(sec.id);
+        this.closeDrawer();
+      });
+
+      this.workspacesNavList.appendChild(btn);
+    });
+  }
+
+  switchWorkspace(sectionId) {
+    this.activeSectionId = sectionId;
+    const curSection = this.sections.find(s => s.id === sectionId) || this.sections[0];
+
+    if (sectionId === 'tools') {
+      if (this.coursesViewPanel) this.coursesViewPanel.classList.add('hidden');
+      if (this.toolsViewPanel) this.toolsViewPanel.classList.remove('hidden');
+      if (this.mobileNavChannelsBtn) this.mobileNavChannelsBtn.classList.remove('active');
+      if (this.mobileNavToolsBtn) this.mobileNavToolsBtn.classList.add('active');
+      if (this.headerAddText) this.headerAddText.textContent = 'Add Tool';
+      if (this.searchInput) this.searchInput.placeholder = 'Search tools, tags, URLs...';
+      this.renderTools();
+    } else {
+      if (this.coursesViewPanel) this.coursesViewPanel.classList.remove('hidden');
+      if (this.toolsViewPanel) this.toolsViewPanel.classList.add('hidden');
+      if (this.mobileNavChannelsBtn) this.mobileNavChannelsBtn.classList.add('active');
+      if (this.mobileNavToolsBtn) this.mobileNavToolsBtn.classList.remove('active');
+      if (this.headerAddText) this.headerAddText.textContent = `Add to ${curSection.shortName}`;
+      if (this.searchInput) this.searchInput.placeholder = `Search in ${curSection.shortName}...`;
+      if (this.activeCategoryTitle) this.activeCategoryTitle.textContent = curSection.title;
+      this.renderCourses();
+    }
+
+    this.renderWorkspacesNav();
+    this.renderCategoryChannels();
+    this.renderCounts();
+  }
+
+  openWorkspaceModal(editSection = null) {
+    const icons = ['folder', 'video', 'tools', 'code', 'book', 'globe', 'star', 'cpu', 'terminal', 'bookmark'];
+    if (this.workspaceIconPicker) {
+      this.workspaceIconPicker.innerHTML = '';
+      icons.forEach(ic => {
+        const chip = document.createElement('div');
+        chip.className = `icon-choice-chip ${ic === (editSection ? editSection.icon : 'folder') ? 'selected' : ''}`;
+        chip.dataset.icon = ic;
+        chip.innerHTML = `${getWorkspaceIconSvg(ic, 16)} <span>${ic}</span>`;
+        chip.addEventListener('click', () => {
+          this.workspaceIconPicker.querySelectorAll('.icon-choice-chip').forEach(c => c.classList.remove('selected'));
+          chip.classList.add('selected');
+          if (this.workspaceSelectedIcon) this.workspaceSelectedIcon.value = ic;
+        });
+        this.workspaceIconPicker.appendChild(chip);
+      });
+    }
+
+    if (editSection) {
+      if (this.workspaceModalTitle) this.workspaceModalTitle.textContent = 'Edit Workspace';
+      if (this.workspaceEditId) this.workspaceEditId.value = editSection.id;
+      if (this.workspaceTitleInput) this.workspaceTitleInput.value = editSection.title;
+      if (this.workspaceShortNameInput) this.workspaceShortNameInput.value = editSection.shortName;
+      if (this.workspaceDescInput) this.workspaceDescInput.value = editSection.description || '';
+      if (this.workspaceSelectedIcon) this.workspaceSelectedIcon.value = editSection.icon || 'folder';
+      if (this.deleteWorkspaceBtn) {
+        if (!editSection.isDefault) this.deleteWorkspaceBtn.classList.remove('hidden');
+        else this.deleteWorkspaceBtn.classList.add('hidden');
+      }
+    } else {
+      if (this.workspaceModalTitle) this.workspaceModalTitle.textContent = 'Create Workspace';
+      if (this.workspaceEditId) this.workspaceEditId.value = '';
+      if (this.workspaceForm) this.workspaceForm.reset();
+      if (this.workspaceSelectedIcon) this.workspaceSelectedIcon.value = 'folder';
+      if (this.deleteWorkspaceBtn) this.deleteWorkspaceBtn.classList.add('hidden');
+    }
+
+    if (this.workspaceModalOverlay) this.workspaceModalOverlay.classList.remove('hidden');
+    setTimeout(() => {
+      if (this.workspaceTitleInput) this.workspaceTitleInput.focus();
+    }, 100);
+  }
+
+  closeWorkspaceModal() {
+    if (this.workspaceModalOverlay) this.workspaceModalOverlay.classList.add('hidden');
+    if (this.workspaceForm) this.workspaceForm.reset();
+  }
+
+  handleWorkspaceSubmit(e) {
+    e.preventDefault();
+    const title = this.workspaceTitleInput ? this.workspaceTitleInput.value.trim() : '';
+    const shortName = this.workspaceShortNameInput ? this.workspaceShortNameInput.value.trim() : title;
+    const desc = this.workspaceDescInput ? this.workspaceDescInput.value.trim() : '';
+    const icon = this.workspaceSelectedIcon ? this.workspaceSelectedIcon.value : 'folder';
+    const editId = this.workspaceEditId ? this.workspaceEditId.value : '';
+
+    if (!title) {
+      this.showToast('Please provide a workspace title.', 'warning');
+      return;
+    }
+
+    if (editId) {
+      const sec = this.sections.find(s => s.id === editId);
+      if (sec) {
+        sec.title = title;
+        sec.shortName = shortName;
+        sec.description = desc;
+        sec.icon = icon;
+        this.saveSections();
+        this.showToast(`Updated workspace "${title}"`, 'success');
+      }
+    } else {
+      const newSec = {
+        id: 'sec-' + Date.now(),
+        title: title,
+        shortName: shortName,
+        icon: icon,
+        description: desc,
+        isDefault: false
+      };
+      this.sections.push(newSec);
+      this.saveSections();
+      this.showToast(`Created workspace "${title}"`, 'success');
+      this.switchWorkspace(newSec.id);
+    }
+
+    this.closeWorkspaceModal();
+    this.renderWorkspacesNav();
+  }
+
+  handleDeleteWorkspace() {
+    const editId = this.workspaceEditId ? this.workspaceEditId.value : '';
+    if (!editId) return;
+
+    const sec = this.sections.find(s => s.id === editId);
+    if (!sec || sec.isDefault) return;
+
+    if (confirm(`Delete workspace "${sec.title}"? Any items inside will be safely moved to Courses.`)) {
+      this.courses.forEach(c => {
+        if (c.sectionId === editId) c.sectionId = 'courses';
+      });
+      this.tools.forEach(t => {
+        if (t.sectionId === editId) t.sectionId = 'tools';
+      });
+
+      this.sections = this.sections.filter(s => s.id !== editId);
+      this.saveSections();
+      this.saveCourses();
+      this.saveTools();
+
+      this.closeWorkspaceModal();
+      this.switchWorkspace('courses');
+      this.showToast(`Workspace "${sec.title}" deleted.`, 'info');
+    }
+  }
+
+  // ==========================================================================
+  // 8. Universal Category Management
+  // ==========================================================================
+
+  openManageCategoriesModal() {
+    this.renderManageCategoriesList();
+    if (this.manageCategoriesModalOverlay) this.manageCategoriesModalOverlay.classList.remove('hidden');
+  }
+
+  closeManageCategoriesModal() {
+    if (this.manageCategoriesModalOverlay) this.manageCategoriesModalOverlay.classList.add('hidden');
+    this.renderCategoryChannels();
+  }
+
+  renderManageCategoriesList() {
+    if (!this.manageCategoriesList) return;
+    this.manageCategoriesList.innerHTML = '';
+
+    this.categories.forEach(cat => {
+      const count = this.courses.filter(c => c.category === cat.name).length;
+      const row = document.createElement('div');
+      row.className = 'category-manage-row';
+
+      row.innerHTML = `
+        <div class="cat-row-left">
+          <span class="cat-row-color" style="background-color: ${cat.color};"></span>
+          <span class="cat-row-name">${escapeHtml(cat.name)}</span>
+          <span class="cat-row-count">${count} items</span>
+        </div>
+        <div class="cat-row-actions">
+          <button type="button" class="cat-action-btn delete-cat" title="Delete Category" aria-label="Delete Category">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          </button>
+        </div>
+      `;
+
+      const delBtn = row.querySelector('.delete-cat');
+      delBtn.addEventListener('click', () => {
+        if (this.categories.length <= 1) {
+          this.showToast('At least one category is required.', 'warning');
+          return;
+        }
+        if (confirm(`Delete category "${cat.name}"? Items in it will move to General.`)) {
+          this.courses.forEach(c => {
+            if (c.category === cat.name) c.category = 'General';
+          });
+          this.categories = this.categories.filter(c => c.id !== cat.id);
+          this.saveCategories();
+          this.saveCourses();
+          this.renderManageCategoriesList();
+          this.render();
+          this.showToast(`Deleted category "${cat.name}"`, 'info');
+        }
+      });
+
+      this.manageCategoriesList.appendChild(row);
+    });
+  }
+
+  handleInlineCategorySubmit(e) {
+    e.preventDefault();
+    const name = this.manageNewCatName ? this.manageNewCatName.value.trim() : '';
+    const color = this.manageNewCatColor ? this.manageNewCatColor.value : '#D4AF37';
+
+    if (!name) return;
+    if (this.categories.some(c => c.name.toLowerCase() === name.toLowerCase())) {
+      this.showToast('Category name already exists.', 'warning');
+      return;
+    }
+
+    const newCat = {
+      id: 'cat-' + Date.now(),
+      name: name,
+      color: color
+    };
+
+    this.categories.push(newCat);
+    this.saveCategories();
+    if (this.manageNewCatName) this.manageNewCatName.value = '';
+    this.renderManageCategoriesList();
+    this.render();
+    this.showToast(`Added category "${name}"`, 'success');
+  }
+
+  populateSectionDropdowns(selectedSectionId = 'courses') {
+    if (this.courseSectionSelect) {
+      this.courseSectionSelect.innerHTML = '';
+      this.sections.forEach(sec => {
+        const opt = document.createElement('option');
+        opt.value = sec.id;
+        opt.textContent = `${sec.title} (${sec.shortName})`;
+        if (sec.id === selectedSectionId) opt.selected = true;
+        this.courseSectionSelect.appendChild(opt);
+      });
+    }
+
+    if (this.toolSectionSelect) {
+      this.toolSectionSelect.innerHTML = '';
+      this.sections.forEach(sec => {
+        const opt = document.createElement('option');
+        opt.value = sec.id;
+        opt.textContent = `${sec.title} (${sec.shortName})`;
+        if (sec.id === (selectedSectionId || 'tools')) opt.selected = true;
+        this.toolSectionSelect.appendChild(opt);
+      });
+    }
+  }
+
+  populateCategoryDropdown() {
+    if (!this.courseCategorySelect) return;
+    this.courseCategorySelect.innerHTML = '';
+    this.categories.forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat.name;
+      opt.textContent = cat.name;
+      this.courseCategorySelect.appendChild(opt);
+    });
+  }
+
+  openCategoryModal() {
+    if (this.categoryForm) this.categoryForm.reset();
+    if (this.catNameErrorMsg) this.catNameErrorMsg.classList.add('hidden');
+    if (this.categoryModalOverlay) this.categoryModalOverlay.classList.remove('hidden');
+    setTimeout(() => {
+      if (this.newCategoryNameInput) this.newCategoryNameInput.focus();
+    }, 100);
+  }
+
+  closeCategoryModal() {
+    if (this.categoryModalOverlay) this.categoryModalOverlay.classList.add('hidden');
+  }
+
+  handleCategorySubmit(e) {
+    e.preventDefault();
+    const name = this.newCategoryNameInput.value.trim();
+    if (!name) return;
+
+    const exists = this.categories.some(c => c.name.toLowerCase() === name.toLowerCase());
+    if (exists) {
+      if (this.catNameErrorMsg) this.catNameErrorMsg.classList.remove('hidden');
+      return;
+    }
+
+    const colorRadio = this.categoryForm.querySelector('input[name="catColor"]:checked');
+    const color = colorRadio ? colorRadio.value : '#D4AF37';
+
+    const newCategory = {
+      id: 'cat-' + Date.now(),
+      name: name,
+      color: color
+    };
+
+    this.categories.push(newCategory);
+    this.saveCategories();
+    this.populateCategoryDropdown();
+    if (this.courseCategorySelect) this.courseCategorySelect.value = name;
+    this.closeCategoryModal();
+    this.render();
+    this.showToast(`Category "${name}" created!`, 'success');
+  }
+
+  // ==========================================================================
+  // 9. Course & Item CRUD Operations
   // ==========================================================================
 
   checkLiveDuplicate() {
@@ -1007,9 +1480,6 @@ class CourseVaultApp {
     }
   }
 
-  /**
-   * Updates the live thumbnail preview box in the Add/Edit Course modal
-   */
   updateThumbnailPreview() {
     if (!this.thumbPreviewImg || !this.thumbPreviewFallback) return;
 
@@ -1017,25 +1487,22 @@ class CourseVaultApp {
     const customThumb = this.courseThumbnailInput ? this.courseThumbnailInput.value.trim() : '';
     const videoId = this.extractYouTubeVideoId(rawUrl);
     const playlistId = this.extractYouTubePlaylistId(rawUrl);
+    const domain = this.extractDomain(rawUrl);
 
-    // Toggle reset/clear button for custom cover
     if (this.clearCustomCoverBtn) {
-      if (customThumb) {
-        this.clearCustomCoverBtn.classList.remove('hidden');
-      } else {
-        this.clearCustomCoverBtn.classList.add('hidden');
-      }
+      if (customThumb) this.clearCustomCoverBtn.classList.remove('hidden');
+      else this.clearCustomCoverBtn.classList.add('hidden');
     }
 
-    // 1. Priority 1: Custom Cover Image URL (Takes precedence over auto thumbnail)
+    // 1. Priority 1: Custom Cover Image URL or Base64
     if (customThumb) {
       this.thumbPreviewImg.src = customThumb;
       this.thumbPreviewImg.classList.remove('hidden');
       this.thumbPreviewFallback.classList.add('hidden');
       if (this.thumbPreviewStatus) {
         const isDeviceUpload = customThumb.startsWith('data:image/');
-        this.thumbPreviewStatus.textContent = isDeviceUpload ? 'Device Upload Cover Active' : 'Custom Cover URL Active';
-        this.thumbPreviewStatus.style.color = '#38bdf8';
+        this.thumbPreviewStatus.textContent = isDeviceUpload ? 'Device Image Attached' : 'Custom Cover URL Active';
+        this.thumbPreviewStatus.style.color = '#E5C578';
       }
       this.thumbPreviewImg.onerror = () => {
         this.thumbPreviewImg.classList.add('hidden');
@@ -1049,53 +1516,68 @@ class CourseVaultApp {
       return;
     }
 
-    // 2. Priority 2: Auto YouTube Video Thumbnail (hqdefault.jpg)
+    // 2. Priority 2: Auto YouTube Video Thumbnail (maxresdefault.jpg with fallback)
     if (videoId) {
-      const hqUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-      this.thumbPreviewImg.src = hqUrl;
+      const maxresUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+      this.thumbPreviewImg.src = maxresUrl;
       this.thumbPreviewImg.classList.remove('hidden');
       this.thumbPreviewFallback.classList.add('hidden');
       if (this.thumbPreviewStatus) {
-        this.thumbPreviewStatus.textContent = playlistId ? 'Auto Video Thumbnail (Video + Playlist)' : 'Auto YouTube Thumbnail (hqdefault.jpg)';
-        this.thumbPreviewStatus.style.color = '#10b981';
+        this.thumbPreviewStatus.textContent = playlistId ? 'Auto Video Thumbnail (Video + Playlist)' : 'Auto YouTube Preview (maxresdefault.jpg)';
+        this.thumbPreviewStatus.style.color = '#D4AF37';
       }
 
       this.thumbPreviewImg.onerror = () => {
-        // Fallback to mqdefault if hqdefault is unavailable
-        if (this.thumbPreviewImg.src.includes('hqdefault.jpg')) {
+        if (this.thumbPreviewImg.src.includes('maxresdefault.jpg')) {
+          this.thumbPreviewImg.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+          if (this.thumbPreviewStatus) this.thumbPreviewStatus.textContent = 'Auto YouTube Preview (hqdefault.jpg)';
+        } else if (this.thumbPreviewImg.src.includes('hqdefault.jpg')) {
           this.thumbPreviewImg.src = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
-          if (this.thumbPreviewStatus) this.thumbPreviewStatus.textContent = 'Auto-detected (mqdefault.jpg)';
         } else {
           this.thumbPreviewImg.classList.add('hidden');
           this.thumbPreviewFallback.classList.remove('hidden');
           if (this.thumbPreviewText) this.thumbPreviewText.textContent = 'Thumbnail preview unavailable';
-          if (this.thumbPreviewStatus) {
-            this.thumbPreviewStatus.textContent = 'Preview error';
-            this.thumbPreviewStatus.style.color = '#f59e0b';
-          }
         }
       };
       return;
     }
 
-    // 3. Priority 3: Pure YouTube Playlist without a video attached (Generic Icon)
+    // 3. Priority 3: YouTube Playlist Without Video ID
     if (playlistId) {
       this.thumbPreviewImg.classList.add('hidden');
       this.thumbPreviewFallback.classList.remove('hidden');
       if (this.thumbPreviewText) {
-        this.thumbPreviewText.innerHTML = '<strong>YouTube Playlist (Generic Icon)</strong><br><span style="font-size:0.75rem; color:#94a3b8;">Paste a Custom Cover Image URL above to override this generic playlist icon!</span>';
+        this.thumbPreviewText.innerHTML = '<strong>YouTube Playlist</strong><br><span style="font-size:0.75rem; color:#9CA3AF;">Paste an optional Custom Cover Image URL or upload a device image above!</span>';
       }
       if (this.thumbPreviewStatus) {
-        this.thumbPreviewStatus.textContent = 'Generic Playlist Icon';
-        this.thumbPreviewStatus.style.color = '#f59e0b';
+        this.thumbPreviewStatus.textContent = 'Playlist Art';
+        this.thumbPreviewStatus.style.color = '#D4AF37';
       }
       return;
     }
 
-    // 4. Default placeholder: Awaiting URL input
+    // 4. Priority 4: Standard Website link (Favicon / Monogram)
+    if (domain) {
+      const faviconUrl = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128`;
+      this.thumbPreviewImg.src = faviconUrl;
+      this.thumbPreviewImg.classList.remove('hidden');
+      this.thumbPreviewFallback.classList.add('hidden');
+      if (this.thumbPreviewStatus) {
+        this.thumbPreviewStatus.textContent = `Web Favicon (${domain})`;
+        this.thumbPreviewStatus.style.color = '#38bdf8';
+      }
+      this.thumbPreviewImg.onerror = () => {
+        this.thumbPreviewImg.classList.add('hidden');
+        this.thumbPreviewFallback.classList.remove('hidden');
+        if (this.thumbPreviewText) this.thumbPreviewText.textContent = domain;
+      };
+      return;
+    }
+
+    // Default: Awaiting URL
     this.thumbPreviewImg.classList.add('hidden');
     this.thumbPreviewFallback.classList.remove('hidden');
-    if (this.thumbPreviewText) this.thumbPreviewText.textContent = 'Thumbnail will auto-render from YouTube link or Custom Cover';
+    if (this.thumbPreviewText) this.thumbPreviewText.textContent = 'Thumbnail auto-generates from YouTube, Favicon, or Custom Image';
     if (this.thumbPreviewStatus) {
       this.thumbPreviewStatus.textContent = 'Awaiting URL...';
       this.thumbPreviewStatus.style.color = 'var(--text-muted)';
@@ -1107,6 +1589,7 @@ class CourseVaultApp {
 
     const title = this.courseTitleInput.value.trim();
     const rawUrl = this.courseUrlInput.value.trim();
+    const sectionId = this.courseSectionSelect ? this.courseSectionSelect.value : (this.activeSectionId || 'courses');
     const category = this.courseCategorySelect.value;
     const notes = this.courseNotesInput.value.trim();
     const customThumbnail = this.courseThumbnailInput ? this.courseThumbnailInput.value.trim() : '';
@@ -1115,18 +1598,17 @@ class CourseVaultApp {
     const editId = this.courseEditId.value;
 
     if (!title) {
-      this.showToast('Please enter a course title.', 'warning');
+      this.showToast('Please enter a course or item title.', 'warning');
       this.courseTitleInput.focus();
       return;
     }
 
     if (!rawUrl) {
-      this.showToast('Please enter a valid YouTube URL.', 'warning');
+      this.showToast('Please enter a valid URL.', 'warning');
       this.courseUrlInput.focus();
       return;
     }
 
-    // Duplicate Check Enforcement (skip duplicate check against itself when editing)
     const duplicate = this.findDuplicateCourse(rawUrl, editId);
     if (duplicate) {
       this.duplicateWarningAlert.classList.remove('hidden');
@@ -1138,19 +1620,16 @@ class CourseVaultApp {
     const videoId = this.extractYouTubeVideoId(rawUrl);
     const playlistId = this.extractYouTubePlaylistId(rawUrl);
     const { normalized } = this.normalizeUrl(rawUrl);
-    
-    // Strict priority: Custom Cover Image URL > Auto YouTube Video Thumbnail > Default generic placeholder
-    const cover = this.resolveCoverThumbnail({
-      url: rawUrl,
-      videoId: videoId,
-      customThumbnailUrl: customThumbnail
-    });
-    const thumbnailUrl = cover.url || '';
+
+    let thumbnailUrl = customThumbnail;
+    if (!thumbnailUrl && videoId) {
+      thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+    }
 
     if (editId) {
-      // Edit existing course
       const course = this.courses.find(c => c.id === editId);
       if (course) {
+        course.sectionId = sectionId;
         course.title = title;
         course.url = rawUrl;
         course.normalizedUrl = normalized;
@@ -1161,12 +1640,12 @@ class CourseVaultApp {
         course.category = category;
         course.status = status;
         course.notes = notes;
-        this.showToast(`Updated "${title}" cover & details!`, 'success');
+        this.showToast(`Updated "${title}"!`, 'success');
       }
     } else {
-      // Create new course
       const newCourse = {
         id: 'course-' + Date.now(),
+        sectionId: sectionId,
         title: title,
         url: rawUrl,
         normalizedUrl: normalized,
@@ -1177,6 +1656,7 @@ class CourseVaultApp {
         category: category,
         status: status,
         notes: notes,
+        lectures: [],
         createdAt: new Date().toISOString()
       };
       this.courses.unshift(newCourse);
@@ -1185,7 +1665,13 @@ class CourseVaultApp {
 
     this.saveCourses();
     this.closeCourseModal();
-    this.render();
+
+    // If item was placed in a different workspace, switch to it
+    if (sectionId !== this.activeSectionId) {
+      this.switchWorkspace(sectionId);
+    } else {
+      this.render();
+    }
   }
 
   updateCourseStatus(courseId, newStatus) {
@@ -1198,41 +1684,14 @@ class CourseVaultApp {
     this.showToast(`Status updated to "${newStatus}"`, 'info');
   }
 
-  switchView(viewName) {
-    this.activeView = viewName;
-    if (viewName === 'tools') {
-      if (this.coursesViewPanel) this.coursesViewPanel.classList.add('hidden');
-      if (this.toolsViewPanel) this.toolsViewPanel.classList.remove('hidden');
-      if (this.navAllCourses) this.navAllCourses.classList.remove('active');
-      if (this.navTools) this.navTools.classList.add('active');
-      if (this.mobileNavChannelsBtn) this.mobileNavChannelsBtn.classList.remove('active');
-      if (this.mobileNavToolsBtn) this.mobileNavToolsBtn.classList.add('active');
-      if (this.headerAddText) this.headerAddText.textContent = 'Add Tool';
-      if (this.searchInput) this.searchInput.placeholder = 'Search tools, tags, URLs...';
-      this.renderTools();
-    } else {
-      if (this.coursesViewPanel) this.coursesViewPanel.classList.remove('hidden');
-      if (this.toolsViewPanel) this.toolsViewPanel.classList.add('hidden');
-      if (this.navAllCourses) this.navAllCourses.classList.add('active');
-      if (this.navTools) this.navTools.classList.remove('active');
-      if (this.mobileNavChannelsBtn) this.mobileNavChannelsBtn.classList.add('active');
-      if (this.mobileNavToolsBtn) this.mobileNavToolsBtn.classList.remove('active');
-      if (this.headerAddText) this.headerAddText.textContent = 'Add Course';
-      if (this.searchInput) this.searchInput.placeholder = 'Search courses, tags...';
-      this.render();
-    }
-    this.renderCounts();
-  }
-
   confirmDeleteItem(type, id, title) {
     this.itemToDelete = { type, id, title };
     this.courseToDeleteId = (type === 'course') ? id : null;
-    const itemTitleEl = this.deleteItemTitle || this.deleteCourseTitle;
-    if (itemTitleEl) itemTitleEl.textContent = `"${title}"`;
+    if (this.deleteItemTitle) this.deleteItemTitle.textContent = `"${title}"`;
     if (this.deleteModalTitle) {
-      this.deleteModalTitle.textContent = type === 'tool' ? 'Delete Web Tool?' : 'Delete Course?';
+      this.deleteModalTitle.textContent = type === 'tool' ? 'Delete Web Tool?' : 'Delete Item?';
     }
-    this.deleteConfirmModal.classList.remove('hidden');
+    if (this.deleteConfirmModal) this.deleteConfirmModal.classList.remove('hidden');
   }
 
   confirmDelete(courseId) {
@@ -1250,12 +1709,11 @@ class CourseVaultApp {
   closeDeleteModal() {
     this.itemToDelete = null;
     this.courseToDeleteId = null;
-    this.deleteConfirmModal.classList.add('hidden');
+    if (this.deleteConfirmModal) this.deleteConfirmModal.classList.add('hidden');
   }
 
   handleConfirmDelete() {
     if (!this.itemToDelete && !this.courseToDeleteId) return;
-
     const item = this.itemToDelete || { type: 'course', id: this.courseToDeleteId };
 
     if (item.type === 'tool') {
@@ -1280,13 +1738,14 @@ class CourseVaultApp {
   }
 
   openCourseModal(editCourse = null) {
+    this.populateSectionDropdowns(editCourse ? editCourse.sectionId : this.activeSectionId);
     this.populateCategoryDropdown();
     this.duplicateWarningAlert.classList.add('hidden');
 
     const submitBtn = document.getElementById('saveCourseSubmitBtn');
 
     if (editCourse) {
-      this.courseModalTitle.textContent = 'Edit Course Cover & Details';
+      this.courseModalTitle.textContent = 'Edit Item & Cover';
       if (submitBtn) {
         submitBtn.innerHTML = `
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
@@ -1294,6 +1753,7 @@ class CourseVaultApp {
         `;
       }
       this.courseEditId.value = editCourse.id;
+      if (this.courseSectionSelect) this.courseSectionSelect.value = editCourse.sectionId || 'courses';
       this.courseTitleInput.value = editCourse.title;
       this.courseUrlInput.value = editCourse.url;
       this.courseCategorySelect.value = editCourse.category;
@@ -1305,7 +1765,6 @@ class CourseVaultApp {
         this.courseCoverFileInput.value = '';
       }
 
-      // Check if attached cover is an uploaded Base64 image
       const existingThumb = (editCourse.customThumbnailUrl || '').trim();
       if (existingThumb.startsWith('data:image/')) {
         if (this.fileBadgeText) this.fileBadgeText.textContent = 'Device image currently attached';
@@ -1315,33 +1774,25 @@ class CourseVaultApp {
         if (this.fileBadgeInfo) this.fileBadgeInfo.classList.add('hidden');
         if (this.coverUploadBtnText) this.coverUploadBtnText.textContent = 'Upload Cover Image from Device';
       }
-      
+
       const radio = this.courseForm.querySelector(`input[name="courseStatus"][value="${editCourse.status}"]`);
       if (radio) radio.checked = true;
     } else {
-      this.courseModalTitle.textContent = 'Save Course to Vault';
+      this.courseModalTitle.textContent = 'Save Item to Vault';
       if (submitBtn) {
         submitBtn.innerHTML = `
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-          <span>Save Course</span>
+          <span>Save Item</span>
         `;
       }
       this.courseEditId.value = '';
       this.courseForm.reset();
-      if (this.courseThumbnailInput) {
-        this.courseThumbnailInput.value = '';
-      }
-      if (this.courseCoverFileInput) {
-        this.courseCoverFileInput.value = '';
-      }
-      if (this.fileBadgeInfo) {
-        this.fileBadgeInfo.classList.add('hidden');
-      }
-      if (this.coverUploadBtnText) {
-        this.coverUploadBtnText.textContent = 'Upload Cover Image from Device';
-      }
-      
-      // Default to currently selected category filter if specific
+      if (this.courseSectionSelect) this.courseSectionSelect.value = this.activeSectionId || 'courses';
+      if (this.courseThumbnailInput) this.courseThumbnailInput.value = '';
+      if (this.courseCoverFileInput) this.courseCoverFileInput.value = '';
+      if (this.fileBadgeInfo) this.fileBadgeInfo.classList.add('hidden');
+      if (this.coverUploadBtnText) this.coverUploadBtnText.textContent = 'Upload Cover Image from Device';
+
       if (this.activeCategoryFilter !== 'all') {
         this.courseCategorySelect.value = this.activeCategoryFilter;
       }
@@ -1350,16 +1801,8 @@ class CourseVaultApp {
     this.updateThumbnailPreview();
     this.courseModalOverlay.classList.remove('hidden');
     setTimeout(() => {
-      if (editCourse) {
-        // Focus the custom thumbnail input if editing an existing playlist without cover
-        if (!editCourse.videoId && !editCourse.customThumbnailUrl && this.courseThumbnailInput) {
-          this.courseThumbnailInput.focus();
-        } else {
-          this.courseTitleInput.focus();
-        }
-      } else {
-        this.courseUrlInput.focus();
-      }
+      if (editCourse) this.courseTitleInput.focus();
+      else this.courseUrlInput.focus();
     }, 100);
   }
 
@@ -1371,264 +1814,24 @@ class CourseVaultApp {
     if (this.coverUploadBtnText) this.coverUploadBtnText.textContent = 'Upload Cover Image from Device';
   }
 
-  // ==========================================================================
-  // 6. Category Management
-  // ==========================================================================
-
-  populateCategoryDropdown() {
-    this.courseCategorySelect.innerHTML = '';
-    this.categories.forEach(cat => {
-      const opt = document.createElement('option');
-      opt.value = cat.name;
-      opt.textContent = cat.name;
-      this.courseCategorySelect.appendChild(opt);
-    });
-  }
-
-  openCategoryModal() {
-    this.categoryForm.reset();
-    this.catNameErrorMsg.classList.add('hidden');
-    this.categoryModalOverlay.classList.remove('hidden');
-    setTimeout(() => this.newCategoryNameInput.focus(), 100);
-  }
-
-  closeCategoryModal() {
-    this.categoryModalOverlay.classList.add('hidden');
-  }
-
-  handleCategorySubmit(e) {
-    e.preventDefault();
-    const name = this.newCategoryNameInput.value.trim();
-    if (!name) return;
-
-    // Check duplicate category name
-    const exists = this.categories.some(c => c.name.toLowerCase() === name.toLowerCase());
-    if (exists) {
-      this.catNameErrorMsg.classList.remove('hidden');
-      return;
-    }
-
-    const colorRadio = this.categoryForm.querySelector('input[name="catColor"]:checked');
-    const color = colorRadio ? colorRadio.value : '#6366f1';
-
-    const newCategory = {
-      id: 'cat-' + Date.now(),
-      name: name,
-      color: color
-    };
-
-    this.categories.push(newCategory);
-    this.saveCategories();
-    this.populateCategoryDropdown();
-    this.courseCategorySelect.value = name;
-    this.closeCategoryModal();
-    this.render();
-    this.showToast(`Category "${name}" created!`, 'success');
+  clearUploadedFileCover() {
+    if (this.courseCoverFileInput) this.courseCoverFileInput.value = '';
+    if (this.fileBadgeInfo) this.fileBadgeInfo.classList.add('hidden');
+    if (this.coverUploadBtnText) this.coverUploadBtnText.textContent = 'Upload Cover Image from Device';
   }
 
   // ==========================================================================
-  // 7. Backup & Restore (JSON Export / Import)
-  // ==========================================================================
-
-  openBackupModal() {
-    this.importFeedback.classList.add('hidden');
-    this.backupModalOverlay.classList.remove('hidden');
-  }
-
-  closeBackupModal() {
-    this.backupModalOverlay.classList.add('hidden');
-  }
-
-  exportBackupJson() {
-    const backupData = {
-      app: 'CourseVault',
-      version: '1.1.0',
-      exportedAt: new Date().toISOString(),
-      categories: this.categories,
-      courses: this.courses,
-      tools: this.tools
-    };
-
-    const jsonString = JSON.stringify(backupData, null, 2);
-    const blob = new Blob([jsonString], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-
-    const dateStr = new Date().toISOString().split('T')[0];
-    const filename = `coursevault-backup-${dateStr}.json`;
-
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    this.showToast('Backup JSON exported successfully!', 'success');
-  }
-
-  handleImportFile(e) {
-    const file = e.target.files && e.target.files[0];
-    if (file) {
-      this.processImportJson(file);
-    }
-  }
-
-  processImportJson(file) {
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const data = JSON.parse(event.target.result);
-
-        if (!data || !Array.isArray(data.courses)) {
-          this.showImportFeedback('Invalid file: JSON must contain a "courses" array.', 'error');
-          return;
-        }
-
-        let newCategoriesCount = 0;
-        let newCoursesCount = 0;
-        let newToolsCount = 0;
-
-        // Merge Categories
-        if (Array.isArray(data.categories)) {
-          data.categories.forEach(importedCat => {
-            if (!importedCat.name) return;
-            const exists = this.categories.some(c => c.name.toLowerCase() === importedCat.name.toLowerCase());
-            if (!exists) {
-              this.categories.push({
-                id: importedCat.id || ('cat-' + Date.now() + Math.random()),
-                name: importedCat.name,
-                color: importedCat.color || '#6366f1'
-              });
-              newCategoriesCount++;
-            }
-          });
-          this.saveCategories();
-        }
-
-        // Merge Courses (prevent duplicate normalized URLs)
-        data.courses.forEach(importedCourse => {
-          if (!importedCourse.url || !importedCourse.title) return;
-          const videoId = this.extractYouTubeVideoId(importedCourse.url) || importedCourse.videoId || null;
-          const playlistId = this.extractYouTubePlaylistId(importedCourse.url) || importedCourse.playlistId || null;
-          const { normalized } = this.normalizeUrl(importedCourse.url);
-          const customThumb = importedCourse.customThumbnailUrl || '';
-          const thumbUrl = this.getThumbnailUrl(videoId, customThumb || importedCourse.thumbnailUrl);
-          
-          const duplicate = this.courses.find(c => c.normalizedUrl.toLowerCase() === normalized.toLowerCase());
-          if (!duplicate) {
-            this.courses.unshift({
-              id: importedCourse.id || ('course-' + Date.now() + Math.random()),
-              title: importedCourse.title,
-              url: importedCourse.url,
-              normalizedUrl: normalized,
-              videoId: videoId,
-              playlistId: playlistId,
-              thumbnailUrl: thumbUrl,
-              customThumbnailUrl: customThumb,
-              category: importedCourse.category || 'General',
-              status: ['Want to Learn', 'In Progress', 'Completed'].includes(importedCourse.status) ? importedCourse.status : 'Want to Learn',
-              notes: importedCourse.notes || '',
-              createdAt: importedCourse.createdAt || new Date().toISOString()
-            });
-            newCoursesCount++;
-          }
-        });
-
-        // Merge Tools
-        if (Array.isArray(data.tools)) {
-          data.tools.forEach(importedTool => {
-            if (!importedTool.name || !importedTool.url) return;
-            const cleanUrl = importedTool.url.trim().toLowerCase();
-            const duplicate = this.tools.find(t => (t.url || '').trim().toLowerCase() === cleanUrl);
-            if (!duplicate) {
-              this.tools.push({
-                id: importedTool.id || ('tool-' + Date.now() + Math.random()),
-                name: importedTool.name,
-                url: importedTool.url,
-                category: importedTool.category || 'Utility',
-                description: importedTool.description || '',
-                createdAt: importedTool.createdAt || new Date().toISOString()
-              });
-              newToolsCount++;
-            }
-          });
-          this.saveTools();
-        }
-
-        this.saveCourses();
-        this.render();
-        this.renderTools();
-
-        let msg = `Success! Restored ${newCoursesCount} courses, ${newCategoriesCount} categories`;
-        if (newToolsCount > 0) msg += ` & ${newToolsCount} tools`;
-        msg += '.';
-        this.showImportFeedback(msg, 'success');
-        this.showToast(msg, 'success');
-      } catch (err) {
-        console.error('Import parse error:', err);
-        this.showImportFeedback('Failed to read JSON: syntax or schema error.', 'error');
-      }
-    };
-
-    reader.readAsText(file);
-  }
-
-  showImportFeedback(text, type) {
-    this.importFeedback.textContent = text;
-    this.importFeedback.className = `import-feedback ${type}`;
-    this.importFeedback.classList.remove('hidden');
-  }
-
-  loadSampleData() {
-    let coursesAdded = 0;
-    SAMPLE_COURSES.forEach(sc => {
-      const exists = this.courses.some(c => c.normalizedUrl.toLowerCase() === sc.normalizedUrl.toLowerCase());
-      if (!exists) {
-        this.courses.push({ ...sc });
-        coursesAdded++;
-      }
-    });
-
-    let toolsAdded = 0;
-    SAMPLE_TOOLS.forEach(st => {
-      const exists = this.tools.some(t => t.url.toLowerCase() === st.url.toLowerCase());
-      if (!exists) {
-        this.tools.push({ ...st });
-        toolsAdded++;
-      }
-    });
-
-    this.saveCourses();
-    this.saveTools();
-    this.render();
-    this.renderTools();
-    this.closeBackupModal();
-    this.showToast(`Loaded ${coursesAdded} demo courses & ${toolsAdded} demo web tools!`, 'success');
-  }
-
-  clearAllData() {
-    if (confirm('Are you sure you want to clear all saved courses and web tools on this device? (This cannot be undone without a JSON backup)')) {
-      this.courses = [];
-      this.tools = [];
-      this.saveCourses();
-      this.saveTools();
-      this.render();
-      this.renderTools();
-      this.closeBackupModal();
-      this.showToast('Workspace reset to clean state.', 'info');
-    }
-  }
-
-  // ==========================================================================
-  // Tools & Web Utilities CRUD Engine
+  // 10. Tools & Web Utilities CRUD
   // ==========================================================================
 
   openToolModal(editTool = null) {
+    this.populateSectionDropdowns(editTool ? editTool.sectionId : 'tools');
+
     if (editTool) {
       if (this.toolModalTitle) this.toolModalTitle.textContent = 'Edit Web Tool';
       if (this.saveToolBtnText) this.saveToolBtnText.textContent = 'Save Changes';
       if (this.toolEditId) this.toolEditId.value = editTool.id;
+      if (this.toolSectionSelect) this.toolSectionSelect.value = editTool.sectionId || 'tools';
       if (this.toolNameInput) this.toolNameInput.value = editTool.name;
       if (this.toolUrlInput) this.toolUrlInput.value = editTool.url;
       if (this.toolCategoryInput) this.toolCategoryInput.value = editTool.category || 'Utility';
@@ -1638,6 +1841,7 @@ class CourseVaultApp {
       if (this.saveToolBtnText) this.saveToolBtnText.textContent = 'Save Tool';
       if (this.toolEditId) this.toolEditId.value = '';
       if (this.toolForm) this.toolForm.reset();
+      if (this.toolSectionSelect) this.toolSectionSelect.value = 'tools';
       if (this.toolCategoryInput && this.activeToolCategory !== 'all') {
         this.toolCategoryInput.value = this.activeToolCategory;
       }
@@ -1657,6 +1861,7 @@ class CourseVaultApp {
     e.preventDefault();
     const name = this.toolNameInput ? this.toolNameInput.value.trim() : '';
     let url = this.toolUrlInput ? this.toolUrlInput.value.trim() : '';
+    const sectionId = this.toolSectionSelect ? this.toolSectionSelect.value : 'tools';
     const category = (this.toolCategoryInput ? this.toolCategoryInput.value.trim() : '') || 'Utility';
     const description = this.toolDescriptionInput ? this.toolDescriptionInput.value.trim() : '';
     const editId = this.toolEditId ? this.toolEditId.value : '';
@@ -1673,6 +1878,7 @@ class CourseVaultApp {
     if (editId) {
       const tool = this.tools.find(t => t.id === editId);
       if (tool) {
+        tool.sectionId = sectionId;
         tool.name = name;
         tool.url = url;
         tool.category = category;
@@ -1683,6 +1889,7 @@ class CourseVaultApp {
     } else {
       const newTool = {
         id: 'tool-' + Date.now(),
+        sectionId: sectionId,
         name: name,
         url: url,
         category: category,
@@ -1695,21 +1902,20 @@ class CourseVaultApp {
     }
 
     this.closeToolModal();
-    this.renderTools();
+    if (sectionId === 'tools') {
+      this.renderTools();
+    }
     this.renderCounts();
   }
 
   renderTools() {
     if (!this.toolsGrid) return;
-
     let filtered = [...this.tools];
 
-    // Filter by Category Tab
     if (this.activeToolCategory !== 'all') {
       filtered = filtered.filter(t => (t.category || '').toLowerCase() === this.activeToolCategory.toLowerCase());
     }
 
-    // Filter by Search Query
     if (this.searchQuery) {
       filtered = filtered.filter(t => {
         const nameMatch = (t.name || '').toLowerCase().includes(this.searchQuery);
@@ -1720,7 +1926,6 @@ class CourseVaultApp {
       });
     }
 
-    // Sort alphabetically by name
     filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
     if (this.toolsCountTag) {
@@ -1764,15 +1969,9 @@ class CourseVaultApp {
     card.className = 'tool-card';
     card.dataset.id = tool.id;
 
-    let domain = '';
-    try {
-      domain = new URL(tool.url).hostname.replace(/^www\./, '');
-    } catch (e) {
-      domain = tool.url;
-    }
-
+    let domain = this.extractDomain(tool.url) || tool.url;
     const initials = (tool.name || 'WT').substring(0, 2).toUpperCase();
-    const faviconUrl = domain ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64` : '';
+    const faviconUrl = domain ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128` : '';
 
     card.innerHTML = `
       <div class="tool-card-header">
@@ -1812,36 +2011,38 @@ class CourseVaultApp {
       </div>
     `;
 
-    // Edit listener
     const editBtn = card.querySelector('.btn-edit');
-    if (editBtn) {
-      editBtn.addEventListener('click', () => this.openToolModal(tool));
-    }
+    if (editBtn) editBtn.addEventListener('click', () => this.openToolModal(tool));
 
-    // Delete listener
     const deleteBtn = card.querySelector('.btn-delete');
-    if (deleteBtn) {
-      deleteBtn.addEventListener('click', () => this.confirmDeleteTool(tool.id));
-    }
+    if (deleteBtn) deleteBtn.addEventListener('click', () => this.confirmDeleteTool(tool.id));
 
     return card;
   }
 
   // ==========================================================================
-  // 8. Rendering & Filtering Engine
+  // 11. Rendering & Filtering Engine
   // ==========================================================================
 
   render() {
+    this.renderWorkspacesNav();
     this.renderCategoryChannels();
     this.renderCounts();
-    this.renderCourses();
+    if (this.activeSectionId === 'tools') {
+      this.renderTools();
+    } else {
+      this.renderCourses();
+    }
   }
 
   renderCategoryChannels() {
+    if (!this.categoryChannelsList) return;
     this.categoryChannelsList.innerHTML = '';
 
+    const secCourses = this.courses.filter(c => (c.sectionId || 'courses') === this.activeSectionId);
+
     this.categories.forEach(cat => {
-      const count = this.courses.filter(c => c.category === cat.name).length;
+      const count = secCourses.filter(c => c.category === cat.name).length;
       const isActive = this.activeCategoryFilter === cat.name;
 
       const btn = document.createElement('button');
@@ -1855,26 +2056,43 @@ class CourseVaultApp {
         <span class="badge">${count}</span>
       `;
 
+      btn.addEventListener('click', () => {
+        this.activeCategoryFilter = cat.name;
+        this.renderCourses();
+        this.renderCategoryChannels();
+        this.closeDrawer();
+      });
+
       this.categoryChannelsList.appendChild(btn);
     });
 
-    // Update active highlight on "All Courses"
+    // Handle All filter click
     const allCoursesBtn = document.querySelector('.channel-item[data-category="all"]');
     if (allCoursesBtn) {
       allCoursesBtn.classList.toggle('active', this.activeCategoryFilter === 'all' && this.activeStatusFilter === 'all');
     }
 
-    // Update status channel active highlights
     document.querySelectorAll('.channel-item[data-status-filter]').forEach(item => {
       item.classList.toggle('active', this.activeStatusFilter === item.dataset.statusFilter);
+      item.onclick = () => {
+        this.activeStatusFilter = item.dataset.statusFilter;
+        if (this.statusTabsContainer) {
+          this.statusTabsContainer.querySelectorAll('.status-tab').forEach(t => {
+            t.classList.toggle('active', t.dataset.tabStatus === this.activeStatusFilter);
+          });
+        }
+        this.renderCourses();
+        this.closeDrawer();
+      };
     });
   }
 
   renderCounts() {
-    const total = this.courses.length;
-    const wantCount = this.courses.filter(c => c.status === 'Want to Learn').length;
-    const progressCount = this.courses.filter(c => c.status === 'In Progress').length;
-    const completedCount = this.courses.filter(c => c.status === 'Completed').length;
+    const secCourses = this.courses.filter(c => (c.sectionId || 'courses') === this.activeSectionId);
+    const total = secCourses.length;
+    const wantCount = secCourses.filter(c => c.status === 'Want to Learn').length;
+    const progressCount = secCourses.filter(c => c.status === 'In Progress').length;
+    const completedCount = secCourses.filter(c => c.status === 'Completed').length;
 
     if (this.countAll) this.countAll.textContent = total;
     if (this.countWant) this.countWant.textContent = wantCount;
@@ -1884,14 +2102,18 @@ class CourseVaultApp {
   }
 
   renderCourses() {
-    let filtered = [...this.courses];
+    if (!this.coursesGrid) return;
+
+    // Filter by Active Workspace Section
+    let filtered = this.courses.filter(c => (c.sectionId || 'courses') === this.activeSectionId);
 
     // Filter by Category
     if (this.activeCategoryFilter !== 'all') {
       filtered = filtered.filter(c => c.category === this.activeCategoryFilter);
-      this.activeCategoryTitle.textContent = this.activeCategoryFilter;
+      if (this.activeCategoryTitle) this.activeCategoryTitle.textContent = this.activeCategoryFilter;
     } else {
-      this.activeCategoryTitle.textContent = 'All Courses';
+      const curSection = this.sections.find(s => s.id === this.activeSectionId) || this.sections[0];
+      if (this.activeCategoryTitle) this.activeCategoryTitle.textContent = curSection.title;
     }
 
     // Filter by Status Tab
@@ -1905,7 +2127,8 @@ class CourseVaultApp {
         const titleMatch = c.title.toLowerCase().includes(this.searchQuery);
         const catMatch = c.category.toLowerCase().includes(this.searchQuery);
         const notesMatch = c.notes && c.notes.toLowerCase().includes(this.searchQuery);
-        return titleMatch || catMatch || notesMatch;
+        const lecturesMatch = c.lectures && c.lectures.some(l => l.title.toLowerCase().includes(this.searchQuery));
+        return titleMatch || catMatch || notesMatch || lecturesMatch;
       });
     }
 
@@ -1917,36 +2140,41 @@ class CourseVaultApp {
         return new Date(a.createdAt) - new Date(b.createdAt);
       } else if (this.sortOption === 'title') {
         return a.title.localeCompare(b.title);
+      } else if (this.sortOption === 'progress') {
+        return this.calculateCourseProgress(b).pct - this.calculateCourseProgress(a).pct;
       } else if (this.sortOption === 'status') {
         return a.status.localeCompare(b.status);
       }
       return 0;
     });
 
-    this.activeFilterCount.textContent = `${filtered.length} ${filtered.length === 1 ? 'course' : 'courses'}`;
+    if (this.activeFilterCount) {
+      this.activeFilterCount.textContent = `${filtered.length} ${filtered.length === 1 ? 'item' : 'items'}`;
+    }
 
-    // Empty state vs Cards grid
     if (filtered.length === 0) {
       this.coursesGrid.innerHTML = '';
-      this.emptyState.classList.remove('hidden');
-
-      if (this.searchQuery) {
-        if (this.emptyTitle) this.emptyTitle.textContent = 'No Courses Found';
-        this.emptyDescription.textContent = `No courses found matching "${this.searchQuery}".`;
-        this.emptyResetFilterBtn.classList.remove('hidden');
-      } else if (this.activeCategoryFilter !== 'all' || this.activeStatusFilter !== 'all') {
-        if (this.emptyTitle) this.emptyTitle.textContent = 'No Courses Found';
-        this.emptyDescription.textContent = `No courses in "${this.activeCategoryFilter}" with status "${this.activeStatusFilter}".`;
-        this.emptyResetFilterBtn.classList.remove('hidden');
-      } else {
-        if (this.emptyTitle) this.emptyTitle.textContent = 'No Courses Added Yet';
-        this.emptyDescription.textContent = "No courses added yet. Tap '+ Add Course' to get started!";
-        this.emptyResetFilterBtn.classList.add('hidden');
+      if (this.emptyState) {
+        this.emptyState.classList.remove('hidden');
+        if (this.searchQuery) {
+          if (this.emptyTitle) this.emptyTitle.textContent = 'No Items Found';
+          if (this.emptyDescription) this.emptyDescription.textContent = `No items found matching "${this.searchQuery}".`;
+          if (this.emptyResetFilterBtn) this.emptyResetFilterBtn.classList.remove('hidden');
+        } else if (this.activeCategoryFilter !== 'all' || this.activeStatusFilter !== 'all') {
+          if (this.emptyTitle) this.emptyTitle.textContent = 'No Items Found';
+          if (this.emptyDescription) this.emptyDescription.textContent = `No items in "${this.activeCategoryFilter}" with status "${this.activeStatusFilter}".`;
+          if (this.emptyResetFilterBtn) this.emptyResetFilterBtn.classList.remove('hidden');
+        } else {
+          const curSec = this.sections.find(s => s.id === this.activeSectionId) || this.sections[0];
+          if (this.emptyTitle) this.emptyTitle.textContent = `No items in ${curSec.shortName}`;
+          if (this.emptyDescription) this.emptyDescription.textContent = `No courses or bookmarks saved here yet. Tap '+ Add to ${curSec.shortName}' to start!`;
+          if (this.emptyResetFilterBtn) this.emptyResetFilterBtn.classList.add('hidden');
+        }
       }
       return;
     }
 
-    this.emptyState.classList.add('hidden');
+    if (this.emptyState) this.emptyState.classList.add('hidden');
     this.coursesGrid.innerHTML = '';
 
     filtered.forEach(course => {
@@ -1960,32 +2188,29 @@ class CourseVaultApp {
     card.className = 'course-card';
     card.dataset.id = course.id;
 
-    // Find category color
     const catObj = this.categories.find(c => c.name === course.category);
-    const catColor = catObj ? catObj.color : '#6366f1';
+    const catColor = catObj ? catObj.color : '#D4AF37';
 
-    // Status Pill Class
     let statusPillClass = 'card-status-want';
     if (course.status === 'In Progress') statusPillClass = 'card-status-progress';
     if (course.status === 'Completed') statusPillClass = 'card-status-completed';
 
-    // Video ID, Playlist ID, and Cover Resolution (Custom Image > Auto YouTube Thumbnail > Default Generic)
-    const videoId = course.videoId || this.extractYouTubeVideoId(course.url);
-    const playlistId = course.playlistId || this.extractYouTubePlaylistId(course.url);
-    const cover = this.resolveCoverThumbnail(course);
-    const thumbUrl = cover.url;
+    const media = this.resolveItemMedia(course);
+    const progress = this.calculateCourseProgress(course);
+    const isExpanded = this.expandedLecturesCourseIds.has(course.id);
+    const dateFormatted = new Date(course.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 
     // Thumbnail markup
     let thumbnailHtml = '';
-    if (thumbUrl) {
+    if (media.url) {
       thumbnailHtml = `
         <div class="card-thumbnail-wrap">
           <img 
             class="card-thumbnail-img" 
-            src="${escapeHtml(thumbUrl)}" 
+            src="${escapeHtml(media.url)}" 
             alt="${escapeHtml(course.title)}" 
             loading="lazy" 
-            onerror="if (this.src.includes('hqdefault.jpg')) { this.src = this.src.replace('hqdefault.jpg', 'mqdefault.jpg'); } else { this.style.display='none'; this.nextElementSibling.classList.remove('hidden'); }"
+            onerror="if (this.src.includes('maxresdefault.jpg')) { this.src = this.src.replace('maxresdefault.jpg', 'hqdefault.jpg'); } else if (this.src.includes('hqdefault.jpg')) { this.src = this.src.replace('hqdefault.jpg', 'mqdefault.jpg'); } else { this.style.display='none'; this.nextElementSibling.classList.remove('hidden'); }"
           />
           <div class="card-thumbnail-fallback hidden">
             <div class="fallback-glow"></div>
@@ -1997,7 +2222,7 @@ class CourseVaultApp {
               <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><polygon points="8 5 19 12 8 19 8 5"></polygon></svg>
             </div>
           </div>
-          ${cover.isCustom ? `<div class="card-type-badge badge-custom-cover"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg> Custom Cover</div>` : (playlistId ? `<div class="card-type-badge"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line></svg> Playlist</div>` : '')}
+          ${media.isCustom ? `<div class="card-type-badge badge-custom-cover">Custom Cover</div>` : (course.playlistId ? `<div class="card-type-badge">Playlist</div>` : '')}
           <div class="card-status-pill ${statusPillClass}">${course.status}</div>
         </div>
       `;
@@ -2009,12 +2234,11 @@ class CourseVaultApp {
               <div class="stack-card stack-back"></div>
               <div class="stack-card stack-mid"></div>
               <div class="stack-card stack-front">
-                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line></svg>
+                <span style="font-weight:700; font-size: 0.9rem;">${escapeHtml(media.initial || 'CV')}</span>
               </div>
             </div>
             <div class="playlist-meta-info">
-              <span class="playlist-label">YouTube Playlist</span>
-              <span class="playlist-sub">${escapeHtml(course.category)}</span>
+              <span class="playlist-label">${escapeHtml(course.category)}</span>
             </div>
           </div>
           <div class="card-thumb-overlay">
@@ -2022,29 +2246,82 @@ class CourseVaultApp {
               <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><polygon points="8 5 19 12 8 19 8 5"></polygon></svg>
             </div>
           </div>
-          <div class="card-type-badge">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line></svg>
-            Playlist
-          </div>
           <div class="card-status-pill ${statusPillClass}">${course.status}</div>
         </div>
       `;
     }
 
-    // Date formatted
-    const dateFormatted = new Date(course.createdAt).toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric'
-    });
+    // Dynamic lectures list inside accordion
+    let lecturesListHtml = '';
+    const lectures = Array.isArray(course.lectures) ? course.lectures : [];
+    if (lectures.length > 0) {
+      lecturesListHtml = lectures.map((lec, idx) => `
+        <div class="lecture-item-row ${lec.completed ? 'completed' : ''}" data-lecture-id="${lec.id}">
+          <input type="checkbox" class="lecture-checkbox" ${lec.completed ? 'checked' : ''} title="Mark lecture complete" />
+          <div class="lecture-content-col">
+            <span class="lecture-title-text">${idx + 1}. ${escapeHtml(lec.title)}</span>
+            <div class="lecture-meta-row">
+              ${lec.linkUrl ? `<a href="${escapeHtml(lec.linkUrl)}" target="_blank" rel="noopener noreferrer" class="companion-link-pill" title="Open companion resource"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg> Resource</a>` : ''}
+              ${lec.notes ? `<span class="lecture-notes-snippet">${escapeHtml(lec.notes)}</span>` : ''}
+            </div>
+          </div>
+          <button type="button" class="lecture-delete-btn" title="Delete Lecture">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+      `).join('');
+    } else {
+      lecturesListHtml = `<div style="font-size: 0.78rem; color: var(--text-muted); padding: 4px 0;">No lectures tracked yet. Add your first lecture below:</div>`;
+    }
 
-    // Notes markup
+    // LIST VIEW ROW MARKUP
+    const listRowHtml = `
+      <div class="list-row-main">
+        ${thumbnailHtml}
+        <div class="list-info-col">
+          <div class="list-title-row">
+            <h3 class="card-title" title="${escapeHtml(course.title)}">${escapeHtml(course.title)}</h3>
+          </div>
+          <div class="list-meta-row">
+            <span class="category-tag" style="--cat-color: ${catColor};"># ${escapeHtml(course.category)}</span>
+            <span class="card-date">${dateFormatted}</span>
+          </div>
+        </div>
+
+        <div class="list-progress-col">
+          <div class="progress-header">
+            <span>Progress</span>
+            <span class="progress-pct-badge">${progress.pct}%</span>
+          </div>
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" style="width: ${progress.pct}%;"></div>
+          </div>
+        </div>
+
+        <div class="list-actions-col">
+          <a href="${escapeHtml(course.url)}" target="_blank" rel="noopener noreferrer" class="btn-watch-yt">
+            <span>Watch</span>
+          </a>
+          <button type="button" class="card-icon-action toggle-lectures-btn ${isExpanded ? 'expanded' : ''}" title="Lectures & Assets">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+          <button type="button" class="card-icon-action edit-course-btn" title="Edit course">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+          </button>
+          <button type="button" class="card-icon-action delete-action delete-course-btn" title="Delete course">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          </button>
+        </div>
+      </div>
+    `;
+
+    // GRID & COMPACT CARD CONTENT MARKUP
     const notesHtml = course.notes ? `<div class="card-notes">${escapeHtml(course.notes)}</div>` : '';
 
-    card.innerHTML = `
-      ${thumbnailHtml}
+    const gridContentHtml = `
       <div class="card-content">
         <div class="card-meta-row">
-          <span class="category-tag" style="--cat-color: ${catColor};" data-filter-cat="${escapeHtml(course.category)}">
+          <span class="category-tag" style="--cat-color: ${catColor};">
             # ${escapeHtml(course.category)}
           </span>
           <span class="card-date">${dateFormatted}</span>
@@ -2052,6 +2329,17 @@ class CourseVaultApp {
 
         <h3 class="card-title" title="${escapeHtml(course.title)}">${escapeHtml(course.title)}</h3>
         ${notesHtml}
+
+        <!-- Dynamic Course Progress Bar -->
+        <div class="course-progress-wrap">
+          <div class="progress-header">
+            <span>${progress.hasLectures ? `${progress.done} of ${progress.total} Lectures` : 'Completion Progress'}</span>
+            <span class="progress-pct-badge">${progress.pct}%</span>
+          </div>
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" style="width: ${progress.pct}%;"></div>
+          </div>
+        </div>
 
         <!-- Status Segment Control -->
         <div class="card-status-toggle-wrap">
@@ -2066,6 +2354,16 @@ class CourseVaultApp {
           </button>
         </div>
 
+        <!-- Lectures Accordion Toggle Button -->
+        <button type="button" class="card-lectures-toggle ${isExpanded ? 'expanded' : ''}">
+          <span class="lectures-toggle-title">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+            <span>Lectures & Assets</span>
+          </span>
+          <span class="lectures-count-badge">${lectures.length}</span>
+          <svg class="lectures-chevron-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+
         <!-- Footer Actions -->
         <div class="card-actions-footer">
           <a href="${escapeHtml(course.url)}" target="_blank" rel="noopener noreferrer" class="btn-watch-yt">
@@ -2073,7 +2371,7 @@ class CourseVaultApp {
             <span>Watch on YouTube</span>
           </a>
 
-          <button class="card-icon-action copy-link-btn" title="Copy clean course link" aria-label="Copy course link">
+          <button class="card-icon-action copy-link-btn" title="Copy clean link" aria-label="Copy course link">
             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
           </button>
 
@@ -2088,6 +2386,32 @@ class CourseVaultApp {
       </div>
     `;
 
+    // ACCORDION DRAWER MARKUP (Shared across list and grid)
+    const drawerHtml = `
+      <div class="card-lectures-drawer ${isExpanded ? 'expanded' : ''}">
+        <div class="lectures-list">
+          ${lecturesListHtml}
+        </div>
+        <form class="lecture-inline-add">
+          <div class="lecture-quick-inputs">
+            <input type="text" class="lecture-input-sm lecture-add-title" placeholder="Lecture title (e.g. 05 - Routing Protocols)..." required autocomplete="off" />
+            <input type="url" class="lecture-input-sm lecture-add-link" placeholder="Companion URL (e.g. GitHub repo, slides)..." autocomplete="off" />
+            <input type="text" class="lecture-input-sm lecture-add-notes" placeholder="Notes (optional)..." autocomplete="off" />
+          </div>
+          <button type="submit" class="btn-add-lecture-inline">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span>+ Add Lecture</span>
+          </button>
+        </form>
+      </div>
+    `;
+
+    card.innerHTML = `
+      ${listRowHtml}
+      ${gridContentHtml}
+      ${drawerHtml}
+    `;
+
     // Event Listeners on Card
     // Status segment button
     card.querySelectorAll('.status-segment-btn').forEach(btn => {
@@ -2095,6 +2419,61 @@ class CourseVaultApp {
         this.updateCourseStatus(course.id, btn.dataset.setStatus);
       });
     });
+
+    // Accordion Toggle Handlers
+    const toggleButtons = card.querySelectorAll('.card-lectures-toggle, .toggle-lectures-btn');
+    const drawer = card.querySelector('.card-lectures-drawer');
+
+    toggleButtons.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (this.expandedLecturesCourseIds.has(course.id)) {
+          this.expandedLecturesCourseIds.delete(course.id);
+          drawer.classList.remove('expanded');
+          toggleButtons.forEach(b => b.classList.remove('expanded'));
+        } else {
+          this.expandedLecturesCourseIds.add(course.id);
+          drawer.classList.add('expanded');
+          toggleButtons.forEach(b => b.classList.add('expanded'));
+        }
+      });
+    });
+
+    // Lecture Checkboxes
+    card.querySelectorAll('.lecture-checkbox').forEach(chk => {
+      chk.addEventListener('change', (e) => {
+        const row = e.target.closest('.lecture-item-row');
+        if (row && row.dataset.lectureId) {
+          this.toggleLecture(course.id, row.dataset.lectureId, chk.checked);
+        }
+      });
+    });
+
+    // Lecture Delete Buttons
+    card.querySelectorAll('.lecture-delete-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const row = e.target.closest('.lecture-item-row');
+        if (row && row.dataset.lectureId) {
+          this.deleteLecture(course.id, row.dataset.lectureId);
+        }
+      });
+    });
+
+    // Inline Add Lecture Form
+    const addForm = card.querySelector('.lecture-inline-add');
+    if (addForm) {
+      addForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const titleInput = addForm.querySelector('.lecture-add-title');
+        const linkInput = addForm.querySelector('.lecture-add-link');
+        const notesInput = addForm.querySelector('.lecture-add-notes');
+
+        if (!titleInput || !titleInput.value.trim()) return;
+
+        this.addLecture(course.id, titleInput.value, linkInput ? linkInput.value : '', notesInput ? notesInput.value : '');
+      });
+    }
 
     // Category tag filter click
     const tag = card.querySelector('.category-tag');
@@ -2120,26 +2499,240 @@ class CourseVaultApp {
     }
 
     // Edit button
-    const editBtn = card.querySelector('.edit-course-btn');
-    if (editBtn) {
-      editBtn.addEventListener('click', () => {
-        this.openCourseModal(course);
-      });
-    }
+    card.querySelectorAll('.edit-course-btn').forEach(btn => {
+      btn.addEventListener('click', () => this.openCourseModal(course));
+    });
 
     // Delete button
-    const deleteBtn = card.querySelector('.delete-course-btn');
-    if (deleteBtn) {
-      deleteBtn.addEventListener('click', () => {
-        this.confirmDelete(course.id);
-      });
-    }
+    card.querySelectorAll('.delete-course-btn').forEach(btn => {
+      btn.addEventListener('click', () => this.confirmDelete(course.id));
+    });
 
     return card;
   }
 
   // ==========================================================================
-  // 9. Toast Notifications System
+  // 12. Backup & Restore (JSON Export / Import)
+  // ==========================================================================
+
+  openBackupModal() {
+    if (this.importFeedback) this.importFeedback.classList.add('hidden');
+    if (this.backupModalOverlay) this.backupModalOverlay.classList.remove('hidden');
+  }
+
+  closeBackupModal() {
+    if (this.backupModalOverlay) this.backupModalOverlay.classList.add('hidden');
+  }
+
+  exportBackupJson() {
+    const backupData = {
+      app: 'CourseVault',
+      version: '2.0.0',
+      exportedAt: new Date().toISOString(),
+      sections: this.sections,
+      categories: this.categories,
+      courses: this.courses,
+      tools: this.tools,
+      viewMode: this.viewMode
+    };
+
+    const jsonString = JSON.stringify(backupData, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const dateStr = new Date().toISOString().split('T')[0];
+    const filename = `coursevault-backup-${dateStr}.json`;
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    this.showToast('Complete backup exported successfully!', 'success');
+  }
+
+  handleImportFile(e) {
+    const file = e.target.files && e.target.files[0];
+    if (file) {
+      this.processImportJson(file);
+    }
+  }
+
+  processImportJson(file) {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target.result);
+
+        if (!data || (!Array.isArray(data.courses) && !Array.isArray(data.tools))) {
+          this.showImportFeedback('Invalid file: JSON must contain courses or tools.', 'error');
+          return;
+        }
+
+        let newCategoriesCount = 0;
+        let newCoursesCount = 0;
+        let newToolsCount = 0;
+        let newSectionsCount = 0;
+
+        // Restore Workspaces / Sections
+        if (Array.isArray(data.sections)) {
+          data.sections.forEach(sec => {
+            if (!sec.id || !sec.title) return;
+            const exists = this.sections.some(s => s.id === sec.id);
+            if (!exists) {
+              this.sections.push(sec);
+              newSectionsCount++;
+            }
+          });
+          this.saveSections();
+        }
+
+        // Restore Categories
+        if (Array.isArray(data.categories)) {
+          data.categories.forEach(importedCat => {
+            if (!importedCat.name) return;
+            const exists = this.categories.some(c => c.name.toLowerCase() === importedCat.name.toLowerCase());
+            if (!exists) {
+              this.categories.push({
+                id: importedCat.id || ('cat-' + Date.now() + Math.random()),
+                name: importedCat.name,
+                color: importedCat.color || '#D4AF37'
+              });
+              newCategoriesCount++;
+            }
+          });
+          this.saveCategories();
+        }
+
+        // Restore Courses & Lectures
+        if (Array.isArray(data.courses)) {
+          data.courses.forEach(importedCourse => {
+            if (!importedCourse.url || !importedCourse.title) return;
+            const videoId = this.extractYouTubeVideoId(importedCourse.url) || importedCourse.videoId || null;
+            const playlistId = this.extractYouTubePlaylistId(importedCourse.url) || importedCourse.playlistId || null;
+            const { normalized } = this.normalizeUrl(importedCourse.url);
+            const customThumb = importedCourse.customThumbnailUrl || '';
+
+            const duplicate = this.courses.find(c => c.normalizedUrl && normalized && c.normalizedUrl.toLowerCase() === normalized.toLowerCase());
+            if (!duplicate) {
+              this.courses.unshift({
+                id: importedCourse.id || ('course-' + Date.now() + Math.random()),
+                sectionId: importedCourse.sectionId || 'courses',
+                title: importedCourse.title,
+                url: importedCourse.url,
+                normalizedUrl: normalized,
+                videoId: videoId,
+                playlistId: playlistId,
+                thumbnailUrl: customThumb || (videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : ''),
+                customThumbnailUrl: customThumb,
+                category: importedCourse.category || 'General',
+                status: ['Want to Learn', 'In Progress', 'Completed'].includes(importedCourse.status) ? importedCourse.status : 'Want to Learn',
+                notes: importedCourse.notes || '',
+                lectures: Array.isArray(importedCourse.lectures) ? importedCourse.lectures : [],
+                createdAt: importedCourse.createdAt || new Date().toISOString()
+              });
+              newCoursesCount++;
+            }
+          });
+          this.saveCourses();
+        }
+
+        // Restore Tools
+        if (Array.isArray(data.tools)) {
+          data.tools.forEach(importedTool => {
+            if (!importedTool.name || !importedTool.url) return;
+            const cleanUrl = importedTool.url.trim().toLowerCase();
+            const duplicate = this.tools.find(t => (t.url || '').trim().toLowerCase() === cleanUrl);
+            if (!duplicate) {
+              this.tools.push({
+                id: importedTool.id || ('tool-' + Date.now() + Math.random()),
+                sectionId: importedTool.sectionId || 'tools',
+                name: importedTool.name,
+                url: importedTool.url,
+                category: importedTool.category || 'Utility',
+                description: importedTool.description || '',
+                createdAt: importedTool.createdAt || new Date().toISOString()
+              });
+              newToolsCount++;
+            }
+          });
+          this.saveTools();
+        }
+
+        if (data.viewMode && ['grid', 'compact', 'list'].includes(data.viewMode)) {
+          this.viewMode = data.viewMode;
+          this.saveViewMode();
+        }
+
+        this.render();
+        let msg = `Restored ${newCoursesCount} items, ${newCategoriesCount} categories, ${newToolsCount} tools`;
+        if (newSectionsCount > 0) msg += `, ${newSectionsCount} workspaces`;
+        msg += '!';
+        this.showImportFeedback(msg, 'success');
+        this.showToast(msg, 'success');
+      } catch (err) {
+        console.error('Import parse error:', err);
+        this.showImportFeedback('Failed to read JSON: syntax or schema error.', 'error');
+      }
+    };
+
+    reader.readAsText(file);
+  }
+
+  showImportFeedback(text, type) {
+    if (!this.importFeedback) return;
+    this.importFeedback.textContent = text;
+    this.importFeedback.className = `import-feedback ${type}`;
+    this.importFeedback.classList.remove('hidden');
+  }
+
+  loadSampleData() {
+    let coursesAdded = 0;
+    SAMPLE_COURSES.forEach(sc => {
+      const exists = this.courses.some(c => c.normalizedUrl.toLowerCase() === sc.normalizedUrl.toLowerCase());
+      if (!exists) {
+        this.courses.push({ ...sc });
+        coursesAdded++;
+      }
+    });
+
+    let toolsAdded = 0;
+    SAMPLE_TOOLS.forEach(st => {
+      const exists = this.tools.some(t => t.url.toLowerCase() === st.url.toLowerCase());
+      if (!exists) {
+        this.tools.push({ ...st });
+        toolsAdded++;
+      }
+    });
+
+    this.saveCourses();
+    this.saveTools();
+    this.render();
+    this.closeBackupModal();
+    this.showToast(`Loaded ${coursesAdded} demo courses & ${toolsAdded} demo web tools!`, 'success');
+  }
+
+  clearAllData() {
+    if (confirm('Are you sure you want to clear all data on this device? (This cannot be undone without a backup)')) {
+      this.courses = [];
+      this.tools = [];
+      this.sections = [...DEFAULT_SECTIONS];
+      this.categories = [...DEFAULT_CATEGORIES];
+      this.saveSections();
+      this.saveCategories();
+      this.saveCourses();
+      this.saveTools();
+      this.switchWorkspace('courses');
+      this.closeBackupModal();
+      this.showToast('Workspace reset to clean state.', 'info');
+    }
+  }
+
+  // ==========================================================================
+  // 13. Toast Notifications
   // ==========================================================================
 
   showToast(message, type = 'info') {
@@ -2159,33 +2752,31 @@ class CourseVaultApp {
 
     toast.innerHTML = `
       ${iconSvg}
-      <span class="toast-msg">${escapeHtml(message)}</span>
+      <span class="toast-message">${escapeHtml(message)}</span>
     `;
 
-    this.toastStack.appendChild(toast);
-
-    setTimeout(() => {
-      toast.style.opacity = '0';
-      toast.style.transform = 'translateY(10px)';
+    if (this.toastStack) {
+      this.toastStack.appendChild(toast);
       setTimeout(() => {
-        if (toast.parentElement) toast.parentElement.removeChild(toast);
-      }, 200);
-    }, 3200);
+        toast.classList.add('fade-out');
+        setTimeout(() => toast.remove(), 250);
+      }, 3200);
+    }
   }
 }
 
-// Utility function to escape HTML
+// Utility: HTML Escaping
 function escapeHtml(str) {
   if (!str) return '';
-  return str
+  return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+    .replace(/'/g, '&#39;');
 }
 
-// Bootstrap CourseVault on DOM Content Loaded
+// Initialize Application on DOM Ready
 document.addEventListener('DOMContentLoaded', () => {
   window.courseVault = new CourseVaultApp();
 });
