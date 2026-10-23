@@ -284,7 +284,9 @@ class CourseVaultApp {
       if (customCover) {
         thumb = customCover;
       } else if (videoId) {
-        thumb = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+        thumb = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+      } else if (playlistId) {
+        thumb = this.generatePlaylistCoverSvg(course.title, course.category);
       }
 
       if (course.sectionId !== sectionId || !Array.isArray(course.lectures) || course.thumbnailUrl !== thumb) {
@@ -419,6 +421,44 @@ class CourseVaultApp {
     return match && match[1] ? match[1] : null;
   }
 
+  generatePlaylistCoverSvg(title, category) {
+    const rawTitle = (title && typeof title === 'string' ? title.trim() : 'YouTube Playlist') || 'YouTube Playlist';
+    const rawCat = (category && typeof category === 'string' ? category.trim() : 'Curriculum') || 'Curriculum';
+    const safeTitle = rawTitle.slice(0, 38).replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' }[c]));
+    const safeCat = rawCat.replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' }[c]));
+
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="100%" height="100%">
+      <defs>
+        <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#141822"/>
+          <stop offset="60%" stop-color="#10131B"/>
+          <stop offset="100%" stop-color="#0B0D11"/>
+        </linearGradient>
+        <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#D4AF37"/>
+          <stop offset="100%" stop-color="#F3E5AB"/>
+        </linearGradient>
+        <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">
+          <path d="M 24 0 L 0 0 0 24" fill="none" stroke="rgba(255,255,255,0.025)" stroke-width="1"/>
+        </pattern>
+      </defs>
+      <rect width="640" height="360" fill="url(#bg)"/>
+      <rect width="640" height="360" fill="url(#grid)"/>
+      <circle cx="560" cy="70" r="160" fill="rgba(212,175,55,0.06)" filter="blur(40px)"/>
+      <circle cx="80" cy="320" r="130" fill="rgba(212,175,55,0.04)" filter="blur(30px)"/>
+      <g transform="translate(48, 50)">
+        <rect width="60" height="60" rx="14" fill="rgba(212,175,55,0.12)" stroke="rgba(212,175,55,0.35)" stroke-width="1.5"/>
+        <path d="M20 22 h20 M20 30 h20 M20 38 h12 M36 36 l8 4 -8 4 z" fill="none" stroke="#D4AF37" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <rect x="122" y="66" width="96" height="26" rx="13" fill="rgba(212,175,55,0.14)" stroke="rgba(212,175,55,0.35)" stroke-width="1"/>
+      <text x="170" y="83" fill="#F3E5AB" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif" font-size="11" font-weight="700" text-anchor="middle" letter-spacing="1">PLAYLIST</text>
+      <text x="50" y="235" fill="#F3F4F6" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif" font-size="22" font-weight="700" letter-spacing="-0.3">${safeTitle}</text>
+      <text x="50" y="270" fill="#9CA3AF" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif" font-size="13" font-weight="500">${safeCat} • CourseVault</text>
+      <rect x="0" y="356" width="640" height="4" fill="url(#gold)"/>
+    </svg>`;
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  }
+
   extractDomain(rawUrl) {
     if (!rawUrl) return '';
     try {
@@ -430,7 +470,7 @@ class CourseVaultApp {
   }
 
   /**
-   * Resolves item media: YouTube maxresdefault with fallback, domain favicon, or monogram placeholder
+   * Resolves item media: YouTube cover (video/playlist), custom cover, domain favicon, or monogram placeholder
    */
   resolveItemMedia(item) {
     if (!item) return { url: null, type: 'none' };
@@ -442,11 +482,21 @@ class CourseVaultApp {
     const videoId = item.videoId || this.extractYouTubeVideoId(item.url);
     if (videoId) {
       return {
-        url: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
-        fallbackUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+        url: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+        fallbackUrl: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
         isCustom: false,
         type: 'youtube',
         videoId: videoId
+      };
+    }
+
+    const playlistId = item.playlistId || this.extractYouTubePlaylistId(item.url);
+    if (playlistId) {
+      return {
+        url: this.generatePlaylistCoverSvg(item.title, item.category),
+        isCustom: false,
+        type: 'playlist',
+        playlistId: playlistId
       };
     }
 
@@ -462,7 +512,7 @@ class CourseVaultApp {
     }
 
     return {
-      url: null,
+      url: this.generatePlaylistCoverSvg(item.title, item.category || 'Course'),
       initial: (item.title || 'CV').charAt(0).toUpperCase(),
       isCustom: false,
       type: 'placeholder'
@@ -775,6 +825,7 @@ class CourseVaultApp {
     this.workspaceIconPicker = document.getElementById('workspaceIconPicker');
     this.workspaceSelectedIcon = document.getElementById('workspaceSelectedIcon');
     this.deleteWorkspaceBtn = document.getElementById('deleteWorkspaceBtn');
+    this.saveWorkspaceSubmitBtnText = document.getElementById('saveWorkspaceSubmitBtnText');
 
     // Manage Categories Modal
     this.manageCategoriesModalOverlay = document.getElementById('manageCategoriesModalOverlay');
@@ -1022,6 +1073,24 @@ class CourseVaultApp {
     if (this.courseUrlInput) {
       this.courseUrlInput.addEventListener('input', handleUrlChange);
       this.courseUrlInput.addEventListener('paste', () => setTimeout(handleUrlChange, 50));
+    }
+
+    if (this.courseTitleInput) {
+      this.courseTitleInput.addEventListener('input', () => {
+        const rawUrl = this.courseUrlInput ? this.courseUrlInput.value.trim() : '';
+        const playlistId = this.extractYouTubePlaylistId(rawUrl);
+        const videoId = this.extractYouTubeVideoId(rawUrl);
+        const customThumb = this.courseThumbnailInput ? this.courseThumbnailInput.value.trim() : '';
+        if (playlistId && !videoId && !customThumb) {
+          this.updateThumbnailPreview();
+        }
+      });
+    }
+
+    if (this.courseSectionSelect) {
+      this.courseSectionSelect.addEventListener('change', () => {
+        this.populateCategoryDropdown(this.courseSectionSelect.value);
+      });
     }
 
     if (this.courseThumbnailInput) {
@@ -1532,11 +1601,6 @@ class CourseVaultApp {
           <button type="button" class="workspace-action-btn edit-sec" title="Edit Workspace" aria-label="Edit workspace">
             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
           </button>
-          ${!sec.isDefault ? `
-            <button type="button" class="workspace-action-btn delete-sec" title="Delete Workspace" aria-label="Delete workspace">
-              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-            </button>
-          ` : ''}
         </span>
       `;
 
@@ -1548,13 +1612,6 @@ class CourseVaultApp {
           this.openWorkspaceModal(sec);
           return;
         }
-        const delBtn = e.target.closest('.delete-sec');
-        if (delBtn) {
-          e.stopPropagation();
-          this.closeDrawer();
-          this.deleteWorkspaceDirect(sec);
-          return;
-        }
         this.switchWorkspace(sec.id);
         this.closeDrawer();
       });
@@ -1563,33 +1620,10 @@ class CourseVaultApp {
     });
   }
 
-  deleteWorkspaceDirect(sec) {
-    if (!sec || sec.isDefault) return;
-    if (confirm(`Delete workspace "${sec.title}"? Any items inside will be safely moved to Courses.`)) {
-      this.courses.forEach(c => {
-        if (c.sectionId === sec.id) c.sectionId = 'courses';
-      });
-      this.tools.forEach(t => {
-        if (t.sectionId === sec.id) t.sectionId = 'tools';
-      });
-
-      this.sections = this.sections.filter(s => s.id !== sec.id);
-      this.saveSections();
-      this.saveCourses();
-      this.saveTools();
-
-      if (this.activeSectionId === sec.id) {
-        this.switchWorkspace('courses');
-      } else {
-        this.renderWorkspacesNav();
-        this.renderCounts();
-      }
-      this.showToast(`Deleted workspace "${sec.title}"`, 'info');
-    }
-  }
-
   switchWorkspace(sectionId) {
     this.activeSectionId = sectionId;
+    this.activeCategoryFilter = 'all';
+    this.activeToolCategory = 'all';
     const curSection = this.sections.find(s => s.id === sectionId) || this.sections[0];
 
     if (sectionId === 'tools') {
@@ -1632,6 +1666,7 @@ class CourseVaultApp {
 
     if (editSection) {
       if (this.workspaceModalTitle) this.workspaceModalTitle.textContent = 'Edit Workspace';
+      if (this.saveWorkspaceSubmitBtnText) this.saveWorkspaceSubmitBtnText.textContent = 'Save Changes';
       if (this.workspaceEditId) this.workspaceEditId.value = editSection.id;
       if (this.workspaceTitleInput) this.workspaceTitleInput.value = editSection.title;
       if (this.workspaceShortNameInput) this.workspaceShortNameInput.value = editSection.shortName;
@@ -1643,6 +1678,7 @@ class CourseVaultApp {
       }
     } else {
       if (this.workspaceModalTitle) this.workspaceModalTitle.textContent = 'Create Workspace';
+      if (this.saveWorkspaceSubmitBtnText) this.saveWorkspaceSubmitBtnText.textContent = 'Create Workspace';
       if (this.workspaceEditId) this.workspaceEditId.value = '';
       if (this.workspaceForm) this.workspaceForm.reset();
       if (this.workspaceSelectedIcon) this.workspaceSelectedIcon.value = 'folder';
@@ -1894,7 +1930,8 @@ class CourseVaultApp {
     const newCat = {
       id: 'cat-' + Date.now(),
       name: name,
-      color: color
+      color: color,
+      sectionId: this.activeSectionId || 'courses'
     };
 
     this.categories.push(newCat);
@@ -1929,15 +1966,33 @@ class CourseVaultApp {
     }
   }
 
-  populateCategoryDropdown() {
+  populateCategoryDropdown(targetSectionId = null) {
     if (!this.courseCategorySelect) return;
+    const secId = targetSectionId || (this.courseSectionSelect ? this.courseSectionSelect.value : this.activeSectionId) || 'courses';
     this.courseCategorySelect.innerHTML = '';
-    this.categories.forEach(cat => {
+
+    const scoped = this.getWorkspaceScopedCategories(secId);
+    const scopedNames = new Set(scoped.map(c => c.name));
+
+    scoped.forEach(cat => {
       const opt = document.createElement('option');
       opt.value = cat.name;
       opt.textContent = cat.name;
       this.courseCategorySelect.appendChild(opt);
     });
+
+    const others = this.categories.filter(c => !scopedNames.has(c.name));
+    if (others.length > 0) {
+      const group = document.createElement('optgroup');
+      group.label = 'Other Categories';
+      others.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat.name;
+        opt.textContent = cat.name;
+        group.appendChild(opt);
+      });
+      this.courseCategorySelect.appendChild(group);
+    }
   }
 
   openCategoryModal() {
@@ -1970,7 +2025,8 @@ class CourseVaultApp {
     const newCategory = {
       id: 'cat-' + Date.now(),
       name: name,
-      color: color
+      color: color,
+      sectionId: this.activeSectionId || 'courses'
     };
 
     this.categories.push(newCategory);
@@ -2042,27 +2098,23 @@ class CourseVaultApp {
       return;
     }
 
-    // 2. Priority 2: Auto YouTube Video Thumbnail (maxresdefault.jpg with fallback)
+    // 2. Priority 2: Auto YouTube Video Thumbnail (hqdefault.jpg with fallback)
     if (videoId) {
-      const maxresUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
-      this.thumbPreviewImg.src = maxresUrl;
+      const hqUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+      this.thumbPreviewImg.src = hqUrl;
       this.thumbPreviewImg.classList.remove('hidden');
       this.thumbPreviewFallback.classList.add('hidden');
       if (this.thumbPreviewStatus) {
-        this.thumbPreviewStatus.textContent = playlistId ? 'Auto Video Thumbnail (Video + Playlist)' : 'Auto YouTube Preview (maxresdefault.jpg)';
+        this.thumbPreviewStatus.textContent = playlistId ? 'Auto Video Thumbnail (Video + Playlist)' : 'Auto YouTube Preview (hqdefault.jpg)';
         this.thumbPreviewStatus.style.color = '#D4AF37';
       }
 
       this.thumbPreviewImg.onerror = () => {
-        if (this.thumbPreviewImg.src.includes('maxresdefault.jpg')) {
-          this.thumbPreviewImg.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-          if (this.thumbPreviewStatus) this.thumbPreviewStatus.textContent = 'Auto YouTube Preview (hqdefault.jpg)';
-        } else if (this.thumbPreviewImg.src.includes('hqdefault.jpg')) {
+        if (this.thumbPreviewImg.src.includes('hqdefault.jpg')) {
           this.thumbPreviewImg.src = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
         } else {
-          this.thumbPreviewImg.classList.add('hidden');
-          this.thumbPreviewFallback.classList.remove('hidden');
-          if (this.thumbPreviewText) this.thumbPreviewText.textContent = 'Thumbnail preview unavailable';
+          const fallbackCover = this.generatePlaylistCoverSvg(this.courseTitleInput ? this.courseTitleInput.value : '', 'Video');
+          this.thumbPreviewImg.src = fallbackCover;
         }
       };
       return;
@@ -2070,13 +2122,14 @@ class CourseVaultApp {
 
     // 3. Priority 3: YouTube Playlist Without Video ID
     if (playlistId) {
-      this.thumbPreviewImg.classList.add('hidden');
-      this.thumbPreviewFallback.classList.remove('hidden');
-      if (this.thumbPreviewText) {
-        this.thumbPreviewText.innerHTML = '<strong>YouTube Playlist</strong><br><span style="font-size:0.75rem; color:#9CA3AF;">Paste an optional Custom Cover Image URL or upload a device image above!</span>';
-      }
+      const title = this.courseTitleInput ? this.courseTitleInput.value.trim() : 'YouTube Playlist';
+      const cat = this.courseCategorySelect ? this.courseCategorySelect.value : 'Playlist';
+      const playlistCover = this.generatePlaylistCoverSvg(title, cat);
+      this.thumbPreviewImg.src = playlistCover;
+      this.thumbPreviewImg.classList.remove('hidden');
+      this.thumbPreviewFallback.classList.add('hidden');
       if (this.thumbPreviewStatus) {
-        this.thumbPreviewStatus.textContent = 'Playlist Art';
+        this.thumbPreviewStatus.textContent = 'Auto Playlist Cover Active';
         this.thumbPreviewStatus.style.color = '#D4AF37';
       }
       return;
@@ -2149,7 +2202,9 @@ class CourseVaultApp {
 
     let thumbnailUrl = customThumbnail;
     if (!thumbnailUrl && videoId) {
-      thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+      thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+    } else if (!thumbnailUrl && playlistId) {
+      thumbnailUrl = this.generatePlaylistCoverSvg(title, category);
     }
 
     if (editId) {
@@ -2746,36 +2801,98 @@ class CourseVaultApp {
     }
   }
 
+  getWorkspaceScopedCategories(targetSectionId = null) {
+    const activeSecId = targetSectionId || this.activeSectionId || 'courses';
+
+    let activeItems = [];
+    if (activeSecId === 'tools') {
+      activeItems = this.tools;
+    } else {
+      activeItems = this.courses.filter(c => (c.sectionId || 'courses') === activeSecId);
+    }
+
+    const usedCategoryNames = new Set(
+      activeItems
+        .map(i => i.category)
+        .filter(Boolean)
+    );
+
+    return this.categories.filter(cat => {
+      // 1. Used by at least one item in this workspace
+      if (usedCategoryNames.has(cat.name)) return true;
+
+      // 2. Explicitly associated with this workspace
+      if (cat.sectionId && cat.sectionId === activeSecId) return true;
+
+      // 3. For default 'courses' workspace, also include default categories with no sectionId
+      if (activeSecId === 'courses' && (!cat.sectionId || cat.sectionId === 'courses')) {
+        return true;
+      }
+
+      return false;
+    });
+  }
+
   renderCategoryChannels() {
     if (!this.categoryChannelsList) return;
     this.categoryChannelsList.innerHTML = '';
 
-    const secCourses = this.courses.filter(c => (c.sectionId || 'courses') === this.activeSectionId);
+    const isTools = this.activeSectionId === 'tools';
+    const activeItems = isTools 
+      ? this.tools 
+      : this.courses.filter(c => (c.sectionId || 'courses') === this.activeSectionId);
+    const scopedCats = this.getWorkspaceScopedCategories();
 
-    this.categories.forEach(cat => {
-      const count = secCourses.filter(c => c.category === cat.name).length;
-      const isActive = this.activeCategoryFilter === cat.name;
-
-      const btn = document.createElement('button');
-      btn.className = `cat-channel-item ${isActive ? 'active' : ''}`;
-      btn.dataset.category = cat.name;
-      btn.style.setProperty('--cat-accent', cat.color);
-
-      btn.innerHTML = `
-        <span class="cat-bullet"></span>
-        <span class="channel-name">${escapeHtml(cat.name)}</span>
-        <span class="badge">${count}</span>
+    if (scopedCats.length === 0) {
+      const emptyDiv = document.createElement('div');
+      emptyDiv.className = 'sidebar-empty-categories';
+      emptyDiv.innerHTML = `
+        <span class="empty-cat-text">No categories in workspace</span>
+        <button type="button" class="empty-cat-add-btn" title="Add category to this workspace">+ Add</button>
       `;
+      const addBtn = emptyDiv.querySelector('.empty-cat-add-btn');
+      if (addBtn) {
+        addBtn.addEventListener('click', () => {
+          this.closeDrawer();
+          this.openCategoryModal();
+        });
+      }
+      this.categoryChannelsList.appendChild(emptyDiv);
+    } else {
+      scopedCats.forEach(cat => {
+        const count = activeItems.filter(c => c.category === cat.name).length;
+        const isActive = this.activeCategoryFilter === cat.name;
 
-      btn.addEventListener('click', () => {
-        this.activeCategoryFilter = cat.name;
-        this.renderCourses();
-        this.renderCategoryChannels();
-        this.closeDrawer();
+        const btn = document.createElement('button');
+        btn.className = `cat-channel-item ${isActive ? 'active' : ''}`;
+        btn.dataset.category = cat.name;
+        btn.style.setProperty('--cat-accent', cat.color || '#D4AF37');
+
+        btn.innerHTML = `
+          <span class="cat-bullet"></span>
+          <span class="channel-name">${escapeHtml(cat.name)}</span>
+          <span class="badge">${count}</span>
+        `;
+
+        btn.addEventListener('click', () => {
+          if (this.activeCategoryFilter === cat.name) {
+            this.activeCategoryFilter = 'all';
+          } else {
+            this.activeCategoryFilter = cat.name;
+          }
+          if (isTools) {
+            this.activeToolCategory = this.activeCategoryFilter;
+            this.renderTools();
+          } else {
+            this.renderCourses();
+          }
+          this.renderCategoryChannels();
+          this.closeDrawer();
+        });
+
+        this.categoryChannelsList.appendChild(btn);
       });
-
-      this.categoryChannelsList.appendChild(btn);
-    });
+    }
 
     // Handle All filter click
     const allCoursesBtn = document.querySelector('.channel-item[data-category="all"]');

@@ -780,6 +780,43 @@ button {
   background-color: var(--cat-accent, var(--accent-primary));
 }
 
+.sidebar-empty-categories {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  margin: 0.25rem 0;
+  background-color: rgba(255, 255, 255, 0.015);
+}
+
+.empty-cat-text {
+  font-style: italic;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.empty-cat-add-btn {
+  background: transparent;
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  color: var(--accent-gold);
+  border-radius: var(--radius-pill);
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.empty-cat-add-btn:hover {
+  background: rgba(212, 175, 55, 0.15);
+  border-color: var(--accent-gold);
+  color: #ffffff;
+}
+
 .sidebar-footer {
   margin-top: auto;
   padding-top: 1rem;
@@ -2046,12 +2083,29 @@ button {
 }
 
 .btn-danger {
-  background-color: #ef4444;
-  color: #ffffff;
+  background-color: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .btn-danger:hover {
-  background-color: #dc2626;
+  background-color: #ef4444;
+  color: #ffffff;
+  border-color: #ef4444;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-danger:active {
+  transform: translateY(0);
 }
 
 .btn-ghost {
@@ -2917,6 +2971,44 @@ button {
   padding: 1rem 1.5rem;
   border-top: 1px solid var(--border-subtle);
   background-color: rgba(0, 0, 0, 0.1);
+}
+
+.modal-footer-split {
+  justify-content: space-between;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.modal-footer-split .footer-left {
+  display: flex;
+  align-items: center;
+}
+
+.modal-footer-split .footer-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: auto;
+}
+
+@media (max-width: 600px) {
+  .modal-footer-split {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+  .modal-footer-split .footer-right {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+  }
+  .modal-footer-split .footer-left {
+    width: 100%;
+  }
+  .modal-footer-split .footer-left .btn-danger {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 .delete-msg-text {
