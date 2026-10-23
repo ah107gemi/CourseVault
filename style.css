@@ -2219,9 +2219,12 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
-  z-index: 100;
+  padding: max(1rem, env(safe-area-inset-top, 1rem)) 1rem max(1rem, env(safe-area-inset-bottom, 1rem)) 1rem;
+  z-index: 200;
   animation: fadeIn 0.2s ease;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
 }
 
 @keyframes fadeIn {
@@ -2230,18 +2233,23 @@ button {
 }
 
 .modal-card {
-  background-color: rgba(18, 22, 31, 0.95);
+  background-color: rgba(18, 22, 31, 0.98);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--border-medium);
   border-radius: var(--radius-xl);
   width: 100%;
   max-width: 520px;
+  max-height: calc(100dvh - 3rem);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
   display: flex;
   flex-direction: column;
   animation: modalSlide 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
+  margin-top: auto;
+  margin-bottom: auto;
+  position: relative;
+  box-sizing: border-box;
 }
 
 .modal-card.modal-sm {
@@ -2250,6 +2258,16 @@ button {
 
 .modal-card.modal-lg {
   max-width: 660px;
+}
+
+#backupModal,
+.modal-card.modal-backup {
+  max-width: 560px;
+  max-height: calc(100dvh - 3rem);
+  display: flex;
+  flex-direction: column;
+  margin-top: auto;
+  margin-bottom: auto;
 }
 
 /* Dedicated Lecture Management Trigger in Edit Item & Cover Modal */
@@ -2513,14 +2531,21 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.25rem 1.5rem;
+  padding: 1.1rem 1.25rem;
   border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: rgba(18, 22, 31, 0.98);
 }
 
 .modal-title-wrap {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .modal-icon-badge {
@@ -2532,6 +2557,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .cat-badge-accent {
@@ -2552,21 +2578,38 @@ button {
 .modal-title {
   font-size: 1.15rem;
   font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .modal-close-btn {
   color: var(--text-muted);
-  width: 30px;
-  height: 30px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  touch-action: manipulation;
+  flex-shrink: 0;
+  padding: 0;
 }
 
 .modal-close-btn:hover {
   background-color: rgba(255, 255, 255, 0.08);
   color: var(--text-main);
+}
+
+.modal-close-btn:active {
+  background-color: rgba(255, 255, 255, 0.14);
+  transform: scale(0.95);
 }
 
 .modal-form {
@@ -3019,10 +3062,15 @@ button {
 
 /* Backup Sections */
 .backup-sections {
-  padding: 1.5rem;
+  padding: 1.25rem 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  flex: 1 1 auto;
+  max-height: calc(100dvh - 140px);
+  box-sizing: border-box;
 }
 
 .backup-box {
@@ -3539,17 +3587,48 @@ input[type="search"]::-webkit-search-results-decoration {
   }
 
   .mobile-menu-btn {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 38px !important;
-    height: 38px !important;
-    min-width: 38px !important;
-    border-radius: var(--radius-sm);
-    color: var(--text-main);
-    background-color: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--border-subtle);
-    flex-shrink: 0 !important;
+    display: none !important;
+  }
+
+  /* Mobile Modal Safe Positioning & Touch Targets */
+  .modal-overlay {
+    padding: max(0.5rem, env(safe-area-inset-top, 0.5rem)) 0.75rem max(0.5rem, env(safe-area-inset-bottom, 0.5rem)) 0.75rem !important;
+    align-items: flex-start !important;
+  }
+
+  .modal-card {
+    max-height: calc(100dvh - 2rem) !important;
+    margin-top: max(0.5rem, env(safe-area-inset-top, 0.5rem)) !important;
+    margin-bottom: max(0.5rem, env(safe-area-inset-bottom, 0.5rem)) !important;
+    border-radius: var(--radius-lg) !important;
+    width: 100% !important;
+  }
+
+  #backupModal {
+    max-height: calc(100dvh - 2rem) !important;
+    margin-top: max(0.5rem, env(safe-area-inset-top, 0.5rem)) !important;
+    margin-bottom: max(0.5rem, env(safe-area-inset-bottom, 0.5rem)) !important;
+  }
+
+  .modal-header {
+    padding: 0.85rem 1rem !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 20 !important;
+    background-color: #12161F !important;
+  }
+
+  .modal-close-btn {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+
+  .backup-sections {
+    padding: 1rem !important;
+    gap: 1rem !important;
+    max-height: calc(100dvh - 120px) !important;
   }
 
   .brand-logo {

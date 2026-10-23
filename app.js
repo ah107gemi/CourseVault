@@ -1065,6 +1065,17 @@ class CourseVaultApp {
     if (this.loadSampleDataBtn) this.loadSampleDataBtn.addEventListener('click', () => this.loadSampleData());
     if (this.clearAllDataBtn) this.clearAllDataBtn.addEventListener('click', () => this.clearAllData());
 
+    // Universal Modal Backdrop Dismissal (Clicking/Tapping outside modal-card closes it)
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          overlay.classList.add('hidden');
+          if (overlay.id === 'workspaceModalOverlay' && this.workspaceForm) this.workspaceForm.reset();
+          if (overlay.id === 'categoryModalOverlay' && this.categoryForm) this.categoryForm.reset();
+        }
+      });
+    });
+
     // Live URL Detection & Thumbnail Preview
     const handleUrlChange = () => {
       this.checkLiveDuplicate();
@@ -1278,6 +1289,22 @@ class CourseVaultApp {
       }
 
       if (e.key === 'Escape') {
+        // 1. Close any open modal first
+        const openModal = document.querySelector('.modal-overlay:not(.hidden)');
+        if (openModal) {
+          openModal.classList.add('hidden');
+          if (openModal.id === 'workspaceModalOverlay' && this.workspaceForm) this.workspaceForm.reset();
+          if (openModal.id === 'categoryModalOverlay' && this.categoryForm) this.categoryForm.reset();
+          return;
+        }
+
+        // 2. Close mobile drawer if open
+        if (this.sidebarChannels && this.sidebarChannels.classList.contains('open')) {
+          this.closeDrawer();
+          return;
+        }
+
+        // 3. Clear or blur sidebar search
         if (document.activeElement === this.globalSidebarSearchInput) {
           if (this.globalSidebarSearchInput.value) {
             this.globalSidebarSearchInput.value = '';
