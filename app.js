@@ -664,6 +664,17 @@ class CourseVaultApp {
     this.openManageCategoriesBtn = document.getElementById('openManageCategoriesBtn');
     this.sidebarBackupBtn = document.getElementById('sidebarBackupBtn');
 
+    // Sidebar Global Omnisearch
+    this.sidebarOmnisearchWrap = document.getElementById('sidebarOmnisearchWrap');
+    this.globalSidebarSearchInput = document.getElementById('globalSidebarSearchInput');
+    this.globalSidebarSearchClear = document.getElementById('globalSidebarSearchClear');
+    this.sidebarSearchResults = document.getElementById('sidebarSearchResults');
+    this.sidebarSearchKbd = document.getElementById('sidebarSearchKbd');
+    if (this.sidebarSearchKbd) {
+      const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+      this.sidebarSearchKbd.textContent = isMac ? '⌘K' : 'Ctrl K';
+    }
+
     // Main Content
     this.coursesViewPanel = document.getElementById('coursesViewPanel');
     this.toolsViewPanel = document.getElementById('toolsViewPanel');
@@ -720,6 +731,7 @@ class CourseVaultApp {
     this.duplicateWarningText = document.getElementById('duplicateWarningText');
 
     // Dedicated Lecture Modal Elements
+    this.courseLecturesGroup = document.getElementById('courseLecturesGroup');
     this.openLectureModalBtn = document.getElementById('openLectureModalBtn');
     this.lectureCountBadge = document.getElementById('lectureCountBadge');
     this.lectureModalOverlay = document.getElementById('lectureModalOverlay');
@@ -875,7 +887,11 @@ class CourseVaultApp {
 
     // Dedicated Lecture Modal
     if (this.openLectureModalBtn) {
-      this.openLectureModalBtn.addEventListener('click', () => this.openLectureModal());
+      this.openLectureModalBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.openLectureModal();
+      });
     }
     if (this.closeLectureModalBtn) {
       this.closeLectureModalBtn.addEventListener('click', () => this.closeLectureModal());
@@ -1120,6 +1136,9 @@ class CourseVaultApp {
     // Delete Modal
     if (this.cancelDeleteBtn) this.cancelDeleteBtn.addEventListener('click', () => this.closeDeleteModal());
     if (this.confirmDeleteBtn) this.confirmDeleteBtn.addEventListener('click', () => this.handleConfirmDelete());
+
+    // Global Omnisearch
+    this.setupGlobalOmnisearch();
   }
 
   openDrawer() {
@@ -1130,6 +1149,346 @@ class CourseVaultApp {
   closeDrawer() {
     this.sidebarChannels.classList.remove('open');
     this.drawerBackdrop.classList.remove('active');
+  }
+
+  // ==========================================================================
+  // Global Omnisearch Engine
+  // ==========================================================================
+
+  setupGlobalOmnisearch() {
+    if (!this.globalSidebarSearchInput) return;
+
+    // Real-time input handling
+    this.globalSidebarSearchInput.addEventListener('input', (e) => {
+      const query = e.target.value.trim();
+      if (!query) {
+        if (this.globalSidebarSearchClear) this.globalSidebarSearchClear.classList.add('hidden');
+        if (this.sidebarSearchResults) this.sidebarSearchResults.classList.add('hidden');
+      } else {
+        if (this.globalSidebarSearchClear) this.globalSidebarSearchClear.classList.remove('hidden');
+        this.renderOmnisearchResults(query);
+      }
+    });
+
+    // Clear button
+    if (this.globalSidebarSearchClear) {
+      this.globalSidebarSearchClear.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.globalSidebarSearchInput.value = '';
+        this.globalSidebarSearchClear.classList.add('hidden');
+        if (this.sidebarSearchResults) this.sidebarSearchResults.classList.add('hidden');
+        this.globalSidebarSearchInput.focus();
+      });
+    }
+
+    // Re-open results on focus if input has value
+    this.globalSidebarSearchInput.addEventListener('focus', () => {
+      const query = this.globalSidebarSearchInput.value.trim();
+      if (query && this.sidebarSearchResults) {
+        this.renderOmnisearchResults(query);
+      }
+    });
+
+    // Close results when clicking outside
+    document.addEventListener('click', (e) => {
+      if (this.sidebarOmnisearchWrap && !this.sidebarOmnisearchWrap.contains(e.target)) {
+        if (this.sidebarSearchResults) {
+          this.sidebarSearchResults.classList.add('hidden');
+        }
+      }
+    });
+
+    // Global keyboard shortcuts (Ctrl+K / Cmd+K or /)
+    document.addEventListener('keydown', (e) => {
+      const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+      const isCmdOrCtrlK = (isMac ? e.metaKey : e.ctrlKey) && e.key.toLowerCase() === 'k';
+      const activeEl = document.activeElement;
+      const isTyping = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable);
+      const isSlash = e.key === '/' && !isTyping;
+
+      if (isCmdOrCtrlK || isSlash) {
+        e.preventDefault();
+        if (this.sidebarChannels && !this.sidebarChannels.classList.contains('open') && window.innerWidth <= 768) {
+          this.openDrawer();
+        }
+        if (this.globalSidebarSearchInput) {
+          this.globalSidebarSearchInput.focus();
+          this.globalSidebarSearchInput.select();
+          const query = this.globalSidebarSearchInput.value.trim();
+          if (query) this.renderOmnisearchResults(query);
+        }
+      }
+
+      if (e.key === 'Escape') {
+        if (document.activeElement === this.globalSidebarSearchInput) {
+          if (this.globalSidebarSearchInput.value) {
+            this.globalSidebarSearchInput.value = '';
+            if (this.globalSidebarSearchClear) this.globalSidebarSearchClear.classList.add('hidden');
+            if (this.sidebarSearchResults) this.sidebarSearchResults.classList.add('hidden');
+          } else {
+            this.globalSidebarSearchInput.blur();
+            if (this.sidebarSearchResults) this.sidebarSearchResults.classList.add('hidden');
+          }
+        }
+      }
+    });
+  }
+
+  renderOmnisearchResults(rawQuery) {
+    if (!this.sidebarSearchResults) return;
+    const q = (rawQuery || '').trim().toLowerCase();
+    if (!q) {
+      this.sidebarSearchResults.classList.add('hidden');
+      return;
+    }
+
+    const matchedCourses = [];
+    const matchedTools = [];
+
+    // Helper to highlight matching text
+    const highlight = (text) => {
+      if (!text) return '';
+      const str = String(text);
+      const idx = str.toLowerCase().indexOf(q);
+      if (idx === -1) return escapeHtml(str);
+      const before = escapeHtml(str.slice(0, idx));
+      const match = escapeHtml(str.slice(idx, idx + q.length));
+      const after = escapeHtml(str.slice(idx + q.length));
+      return `${before}<strong class="omni-highlight-text">${match}</strong>${after}`;
+    };
+
+    // 1. Scan Courses across all workspaces
+    this.courses.forEach(course => {
+      let matched = false;
+      let matchType = '';
+      let matchDetail = '';
+
+      const titleMatch = (course.title || '').toLowerCase().includes(q);
+      const categoryMatch = (course.category || '').toLowerCase().includes(q);
+      const notesMatch = (course.notes || '').toLowerCase().includes(q);
+      const statusMatch = (course.status || '').toLowerCase().includes(q);
+
+      if (titleMatch) {
+        matched = true;
+        matchType = 'Course Title';
+        matchDetail = course.category;
+      } else if (categoryMatch) {
+        matched = true;
+        matchType = 'Category';
+        matchDetail = course.category;
+      } else if (notesMatch) {
+        matched = true;
+        matchType = 'Notes';
+        matchDetail = course.notes.length > 50 ? course.notes.slice(0, 50) + '...' : course.notes;
+      } else if (statusMatch) {
+        matched = true;
+        matchType = 'Status';
+        matchDetail = course.status;
+      } else if (Array.isArray(course.lectures) && course.lectures.length > 0) {
+        // Scan lectures
+        const matchingLec = course.lectures.find(l => 
+          (l.title && l.title.toLowerCase().includes(q)) || 
+          (l.notes && l.notes.toLowerCase().includes(q)) || 
+          (l.linkUrl && l.linkUrl.toLowerCase().includes(q))
+        );
+        if (matchingLec) {
+          matched = true;
+          matchType = 'Lecture';
+          matchDetail = `Lecture: ${matchingLec.title}`;
+        }
+      }
+
+      if (matched) {
+        matchedCourses.push({
+          type: 'course',
+          id: course.id,
+          title: course.title,
+          category: course.category,
+          sectionId: course.sectionId || 'courses',
+          matchType: matchType,
+          matchDetail: matchDetail,
+          item: course
+        });
+      }
+    });
+
+    // 2. Scan Tools
+    this.tools.forEach(tool => {
+      let matched = false;
+      let matchType = '';
+      let matchDetail = '';
+
+      const nameMatch = (tool.name || '').toLowerCase().includes(q);
+      const categoryMatch = (tool.category || '').toLowerCase().includes(q);
+      const descMatch = (tool.description || '').toLowerCase().includes(q);
+      const urlMatch = (tool.url || '').toLowerCase().includes(q);
+
+      if (nameMatch) {
+        matched = true;
+        matchType = 'Tool Name';
+        matchDetail = tool.category;
+      } else if (categoryMatch) {
+        matched = true;
+        matchType = 'Category';
+        matchDetail = tool.category;
+      } else if (descMatch) {
+        matched = true;
+        matchType = 'Description';
+        matchDetail = tool.description.length > 50 ? tool.description.slice(0, 50) + '...' : tool.description;
+      } else if (urlMatch) {
+        matched = true;
+        matchType = 'Link URL';
+        matchDetail = tool.url;
+      }
+
+      if (matched) {
+        matchedTools.push({
+          type: 'tool',
+          id: tool.id,
+          title: tool.name,
+          category: tool.category,
+          sectionId: tool.sectionId || 'tools',
+          matchType: matchType,
+          matchDetail: matchDetail,
+          item: tool
+        });
+      }
+    });
+
+    const totalMatches = matchedCourses.length + matchedTools.length;
+
+    if (totalMatches === 0) {
+      this.sidebarSearchResults.innerHTML = `
+        <div class="omni-empty-state">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" style="color: var(--accent-gold); opacity: 0.85;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <div>No matches found for <strong class="omni-highlight-text">"${escapeHtml(rawQuery)}"</strong></div>
+          <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">Try searching for course titles, categories, notes, or lectures.</div>
+        </div>
+      `;
+      this.sidebarSearchResults.classList.remove('hidden');
+      return;
+    }
+
+    let resultsHtml = '';
+
+    // Group 1: Courses
+    if (matchedCourses.length > 0) {
+      resultsHtml += `
+        <div class="omni-group-title">
+          <span>Courses & Curriculum</span>
+          <span class="omni-group-badge">${matchedCourses.length}</span>
+        </div>
+      `;
+      matchedCourses.slice(0, 10).forEach(m => {
+        resultsHtml += `
+          <button type="button" class="omni-result-item" data-omni-type="course" data-omni-id="${m.id}" role="option">
+            <div class="omni-item-icon">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+            </div>
+            <div class="omni-item-content">
+              <div class="omni-item-title">${highlight(m.title)}</div>
+              <div class="omni-item-match-badge">
+                <span class="omni-tag-pill"># ${escapeHtml(m.category)}</span>
+                <span>${highlight(m.matchDetail)}</span>
+              </div>
+            </div>
+          </button>
+        `;
+      });
+    }
+
+    // Group 2: Tools
+    if (matchedTools.length > 0) {
+      resultsHtml += `
+        <div class="omni-group-title">
+          <span>Tools & Utilities</span>
+          <span class="omni-group-badge">${matchedTools.length}</span>
+        </div>
+      `;
+      matchedTools.slice(0, 10).forEach(m => {
+        resultsHtml += `
+          <button type="button" class="omni-result-item" data-omni-type="tool" data-omni-id="${m.id}" role="option">
+            <div class="omni-item-icon" style="color: #60a5fa;">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+            </div>
+            <div class="omni-item-content">
+              <div class="omni-item-title">${highlight(m.title)}</div>
+              <div class="omni-item-match-badge">
+                <span class="omni-tag-pill"># ${escapeHtml(m.category)}</span>
+                <span>${highlight(m.matchDetail)}</span>
+              </div>
+            </div>
+          </button>
+        `;
+      });
+    }
+
+    this.sidebarSearchResults.innerHTML = resultsHtml;
+    this.sidebarSearchResults.classList.remove('hidden');
+
+    // Attach click listeners to result rows
+    this.sidebarSearchResults.querySelectorAll('.omni-result-item').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const type = btn.dataset.omniType;
+        const id = btn.dataset.omniId;
+        const match = type === 'course' 
+          ? matchedCourses.find(c => c.id === id)
+          : matchedTools.find(t => t.id === id);
+        if (match) {
+          this.jumpToOmnisearchResult(match);
+        }
+      });
+    });
+  }
+
+  jumpToOmnisearchResult(match) {
+    if (!match) return;
+
+    if (match.type === 'tool') {
+      this.switchWorkspace('tools');
+      this.activeToolCategory = 'all';
+      if (this.toolsCategoryTabs) {
+        this.toolsCategoryTabs.querySelectorAll('.tools-tab').forEach(t => {
+          t.classList.toggle('active', t.dataset.toolCategory === 'all');
+        });
+      }
+      this.renderTools();
+    } else {
+      const targetSec = match.item.sectionId || 'courses';
+      this.switchWorkspace(targetSec);
+      this.activeCategoryFilter = 'all';
+      this.activeStatusFilter = 'all';
+      if (this.statusTabsContainer) {
+        this.statusTabsContainer.querySelectorAll('.status-tab').forEach(t => {
+          t.classList.toggle('active', t.dataset.tabStatus === 'all');
+        });
+      }
+      this.renderCourses();
+    }
+
+    // Hide dropdown & close mobile drawer
+    if (this.sidebarSearchResults) {
+      this.sidebarSearchResults.classList.add('hidden');
+    }
+    this.closeDrawer();
+
+    // Scroll into view & pulse animation
+    setTimeout(() => {
+      const selector = match.type === 'course' 
+        ? `.course-card[data-id="${match.item.id}"]`
+        : `.tool-card[data-id="${match.item.id}"]`;
+      const card = document.querySelector(selector);
+      if (card) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        card.classList.remove('highlight-pulse');
+        void card.offsetWidth; // Trigger reflow for animation restart
+        card.classList.add('highlight-pulse');
+        setTimeout(() => card.classList.remove('highlight-pulse'), 2500);
+      }
+      this.showToast(`Found "${match.title}"`, 'success');
+    }, 120);
   }
 
   // ==========================================================================
@@ -1931,6 +2290,11 @@ class CourseVaultApp {
       ? JSON.parse(JSON.stringify(editCourse.lectures))
       : [];
     this.updateLectureBadge();
+
+    if (this.courseLecturesGroup) {
+      this.courseLecturesGroup.classList.remove('hidden');
+      this.courseLecturesGroup.style.display = 'block';
+    }
 
     const submitBtn = document.getElementById('saveCourseSubmitBtn');
 

@@ -94,6 +94,36 @@
 
       <!-- Categories & Channels Sidebar -->
       <aside class="sidebar-channels" id="sidebarChannels">
+        <!-- Global Omnisearch in Sidebar -->
+        <div class="sidebar-omnisearch-wrap" id="sidebarOmnisearchWrap">
+          <div class="sidebar-omnisearch-input-box">
+            <svg class="sidebar-omnisearch-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input 
+              type="text" 
+              id="globalSidebarSearchInput" 
+              class="sidebar-omnisearch-input" 
+              placeholder="Search everything (courses, tools, notes)..." 
+              autocomplete="off" 
+              spellcheck="false" 
+              aria-label="Global Omnisearch across all workspaces"
+            />
+            <kbd class="sidebar-omnisearch-kbd" id="sidebarSearchKbd">Ctrl K</kbd>
+            <button type="button" class="sidebar-omnisearch-clear hidden" id="globalSidebarSearchClear" aria-label="Clear search" title="Clear">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+          <!-- Live Real-Time Omnisearch Results Dropdown / Popover -->
+          <div class="sidebar-omnisearch-dropdown hidden" id="sidebarSearchResults" role="listbox">
+            <!-- Populated dynamically via JavaScript -->
+          </div>
+        </div>
+
         <!-- Dynamic Workspaces -->
         <div class="sidebar-section-header">
           <span class="channel-section-heading">WORKSPACES</span>
@@ -324,8 +354,8 @@
   </div>
 
   <!-- MODAL: Add / Edit Course -->
-  <div class="modal-overlay hidden" id="courseModalOverlay">
-    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="courseModalTitle">
+  <div class="modal-overlay hidden" id="courseModalOverlay" data-modal="editModal">
+    <div class="modal-card" id="editModal" role="dialog" aria-modal="true" aria-labelledby="courseModalTitle">
       <div class="modal-header">
         <div class="modal-title-wrap">
           <div class="modal-icon-badge">
@@ -515,15 +545,12 @@
 
         <!-- Dedicated Lecture Management Trigger -->
         <div class="form-group manage-lectures-group" id="courseLecturesGroup">
-          <div class="label-with-action">
-            <label class="form-label" style="margin-bottom: 0;">
-              <span>Course Lectures & Curriculum</span>
-            </label>
-            <span class="optional-pill" id="lectureCountBadge">0 lectures</span>
-          </div>
-          <button type="button" class="btn btn-secondary btn-block manage-lectures-trigger-btn" id="openLectureModalBtn">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-            <span id="manageLecturesBtnLabel">Manage Lectures & Curriculum</span>
+          <button type="button" class="btn btn-manage-curriculum-prominent" id="openLectureModalBtn" title="Manage Course Lectures & Curriculum">
+            <span class="btn-curriculum-left">
+              <span class="curriculum-book-icon">📚</span>
+              <span class="curriculum-btn-text" id="manageLecturesBtnLabel">Manage Lectures & Curriculum</span>
+            </span>
+            <span class="curriculum-badge-pill" id="lectureCountBadge">0 lectures</span>
           </button>
         </div>
 
