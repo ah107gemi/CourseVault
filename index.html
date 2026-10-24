@@ -36,7 +36,7 @@
       <!-- Row 1 on mobile: Menu button, Brand Logo, Quick Action Controls -->
       <div class="header-top-bar" id="headerTopBar">
         <div class="header-left">
-          <button class="icon-btn mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle Channels Menu" title="Open Channels">
+          <button class="icon-btn mobile-menu-btn mobile-menu-trigger" id="mobileMenuBtn" aria-label="Toggle Channels Menu" title="Open Channels">
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
           </button>
           <div class="brand-logo" id="brandLogo">
@@ -92,10 +92,10 @@
     <div class="app-body">
       
       <!-- Backdrop for mobile drawer -->
-      <div class="drawer-backdrop hidden" id="drawerBackdrop"></div>
+      <div class="drawer-backdrop backdrop mobile-overlay hidden" id="drawerBackdrop"></div>
 
       <!-- Categories & Channels Sidebar -->
-      <aside class="sidebar-channels" id="sidebarChannels">
+      <aside class="sidebar-channels sidebar mobile-drawer" id="sidebarChannels">
         <!-- Global Omnisearch in Sidebar -->
         <div class="sidebar-omnisearch-wrap" id="sidebarOmnisearchWrap">
           <div class="sidebar-omnisearch-input-box">
@@ -376,7 +376,7 @@
 
     <!-- Mobile Bottom Navigation Bar -->
     <nav class="mobile-bottom-bar" id="mobileBottomBar" aria-label="Mobile Navigation">
-      <button class="bottom-nav-item mobile-menu-toggle" id="bottomNavMenuBtn" data-action="toggle-menu" aria-label="Open Workspaces Menu" title="Workspaces & Menu">
+      <button class="bottom-nav-item mobile-menu-toggle mobile-menu-trigger" id="bottomNavMenuBtn" data-action="toggle-menu" aria-label="Open Workspaces Menu" title="Workspaces & Menu">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
         <span>Menu</span>
       </button>
@@ -1137,7 +1137,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
   <script>
-    const firebaseConfig = {
+    window.firebaseConfig = window.firebaseConfig || {
       apiKey: "AIzaSyALlN8kVugbmUC8zNn2LBWrPXAqO3QZOKQ",
       authDomain: "coursevault-36c69.firebaseapp.com",
       projectId: "coursevault-36c69",
@@ -1148,7 +1148,7 @@
     if (typeof firebase !== 'undefined' && firebase.initializeApp) {
       try {
         if (!firebase.apps.length) {
-          firebase.initializeApp(firebaseConfig);
+          firebase.initializeApp(window.firebaseConfig);
         }
         window.auth = firebase.auth();
         window.db = firebase.firestore();

@@ -13,7 +13,7 @@ const STORAGE_KEY_TOOLS = 'coursevault_tools_v1';
 const STORAGE_KEY_SECTIONS = 'coursevault_sections_v2';
 const STORAGE_KEY_VIEW_MODE = 'coursevault_view_mode_v2';
 
-const firebaseConfig = {
+window.firebaseConfig = window.firebaseConfig || {
   apiKey: "AIzaSyALlN8kVugbmUC8zNn2LBWrPXAqO3QZOKQ",
   authDomain: "coursevault-36c69.firebaseapp.com",
   projectId: "coursevault-36c69",
@@ -21,7 +21,7 @@ const firebaseConfig = {
   messagingSenderId: "784597420212",
   appId: "1:784597420212:web:2bf91a1ea62fe811912fe1"
 };
-const FIREBASE_CONFIG = firebaseConfig;
+const FIREBASE_CONFIG = window.firebaseConfig;
 
 const DEFAULT_SECTIONS = [
   {
@@ -1804,12 +1804,10 @@ class CourseVaultApp {
 
   openDrawer() {
     if (this.sidebarChannels) {
-      this.sidebarChannels.classList.add('open');
-      this.sidebarChannels.classList.add('mobile-open');
+      this.sidebarChannels.classList.add('open', 'active', 'mobile-open');
     }
     if (this.drawerBackdrop) {
-      this.drawerBackdrop.classList.add('active');
-      this.drawerBackdrop.classList.add('open');
+      this.drawerBackdrop.classList.add('active', 'open');
       this.drawerBackdrop.classList.remove('hidden');
     }
     document.body.classList.add('drawer-open');
@@ -1817,12 +1815,10 @@ class CourseVaultApp {
 
   closeDrawer() {
     if (this.sidebarChannels) {
-      this.sidebarChannels.classList.remove('open');
-      this.sidebarChannels.classList.remove('mobile-open');
+      this.sidebarChannels.classList.remove('open', 'active', 'mobile-open');
     }
     if (this.drawerBackdrop) {
-      this.drawerBackdrop.classList.remove('active');
-      this.drawerBackdrop.classList.remove('open');
+      this.drawerBackdrop.classList.remove('active', 'open');
       this.drawerBackdrop.classList.add('hidden');
     }
     document.body.classList.remove('drawer-open');
@@ -4133,7 +4129,57 @@ function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
-// Initialize Application on DOM Ready
+// Initialize Application and Fail-Safe Mobile Menu on DOM Ready
 document.addEventListener('DOMContentLoaded', () => {
-  window.courseVault = new CourseVaultApp();
+  // Standalone Fail-Safe Mobile Drawer Controller
+  const menuBtn = document.querySelector('#mobile-menu-btn') || 
+                  document.querySelector('.mobile-menu-trigger') || 
+                  document.querySelector('.mobile-menu-toggle') || 
+                  document.getElementById('bottomNavMenuBtn') || 
+                  document.getElementById('mobileMenuBtn') || 
+                  document.getElementById('menuBtn');
+  const sidebar = document.querySelector('.sidebar') || 
+                  document.querySelector('.mobile-drawer') || 
+                  document.getElementById('sidebarChannels');
+  const overlay = document.querySelector('.mobile-overlay') || 
+                  document.querySelector('.backdrop') || 
+                  document.getElementById('drawerBackdrop');
+
+  if (menuBtn && sidebar) {
+    const handleMenuClick = (e) => {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      sidebar.classList.toggle('active');
+      sidebar.classList.toggle('open');
+      sidebar.classList.toggle('mobile-open');
+      if (overlay) {
+        const isDrawerOpen = sidebar.classList.contains('active') || sidebar.classList.contains('open');
+        overlay.classList.toggle('active', isDrawerOpen);
+        overlay.classList.toggle('open', isDrawerOpen);
+        overlay.classList.toggle('hidden', !isDrawerOpen);
+      }
+      document.body.classList.toggle('drawer-open', sidebar.classList.contains('active') || sidebar.classList.contains('open'));
+    };
+
+    menuBtn.onclick = handleMenuClick;
+    menuBtn.addEventListener('click', handleMenuClick);
+  }
+
+  if (overlay && sidebar) {
+    overlay.addEventListener('click', (e) => {
+      e.preventDefault();
+      sidebar.classList.remove('active', 'open', 'mobile-open');
+      overlay.classList.remove('active', 'open');
+      overlay.classList.add('hidden');
+      document.body.classList.remove('drawer-open');
+    });
+  }
+
+  try {
+    window.courseVault = new CourseVaultApp();
+  } catch (err) {
+    console.error('[CourseVault] Initialization Error:', err);
+  }
 });

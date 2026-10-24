@@ -2453,10 +2453,18 @@ button {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   box-sizing: border-box;
+  pointer-events: none;
+}
+
+.modal-overlay.open,
+.modal-overlay.active,
+.modal-overlay:not(.hidden):not([hidden]) {
+  pointer-events: auto !important;
 }
 
 .modal-overlay.hidden,
-.modal-overlay[hidden] {
+.modal-overlay[hidden],
+.modal-overlay:not(.open):not(.active).hidden {
   display: none !important;
   pointer-events: none !important;
   visibility: hidden !important;
@@ -3626,8 +3634,14 @@ button {
 
   .sidebar-channels.open,
   .sidebar-channels.mobile-open,
+  .sidebar-channels.active,
+  .sidebar.active,
+  .sidebar.open,
+  .mobile-drawer.active,
+  .mobile-drawer.open,
   aside.sidebar-channels.open,
-  aside.sidebar-channels.mobile-open {
+  aside.sidebar-channels.mobile-open,
+  aside.sidebar-channels.active {
     transform: translateX(0) !important;
   }
 
@@ -3646,7 +3660,11 @@ button {
   }
 
   .drawer-backdrop.active,
-  .drawer-backdrop.open {
+  .drawer-backdrop.open,
+  .backdrop.active,
+  .backdrop.open,
+  .mobile-overlay.active,
+  .mobile-overlay.open {
     display: block !important;
     opacity: 1 !important;
     pointer-events: auto !important;

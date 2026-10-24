@@ -1,4 +1,4 @@
-const CACHE_NAME = 'coursevault-v2.6.0';
+const CACHE_NAME = 'coursevault-v2.7.0';
 const MEDIA_CACHE = 'coursevault-media-v1';
 const STATIC_ASSETS = [
   './',
@@ -12,8 +12,9 @@ const STATIC_ASSETS = [
   './icons/icon.svg'
 ];
 
-// Install: Cache critical static shell
+// Install: Cache critical static shell and immediately activate
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(STATIC_ASSETS);
