@@ -13,6 +13,15 @@ const STORAGE_KEY_TOOLS = 'coursevault_tools_v1';
 const STORAGE_KEY_SECTIONS = 'coursevault_sections_v2';
 const STORAGE_KEY_VIEW_MODE = 'coursevault_view_mode_v2';
 
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAlLNBkVugbmUC8zNn2LBWrPXAq03QZOKQ",
+  authDomain: "coursevault-36c69.firebaseapp.com",
+  projectId: "coursevault-36c69",
+  storageBucket: "coursevault-36c69.firebasestorage.app",
+  messagingSenderId: "784597420212",
+  appId: "1:784597420212:web:2bf91a1ea62fe811912fe1"
+};
+
 const DEFAULT_SECTIONS = [
   {
     id: 'courses',
@@ -206,10 +215,12 @@ class CourseVaultApp {
   // ==========================================================================
 
   init() {
+    this.initFirebase();
     this.loadState();
     this.bindDomElements();
     this.setupEventListeners();
     this.setupPwa();
+    this.setupFirebaseAuth();
     this.render();
   }
 
@@ -326,10 +337,14 @@ class CourseVaultApp {
     } catch (err) {
       console.error('[CourseVault] Failed to save workspaces:', err);
     }
+    this.scheduleCloudSync();
   }
 
   saveViewMode() {
-    localStorage.setItem(STORAGE_KEY_VIEW_MODE, this.viewMode);
+    try {
+      localStorage.setItem(STORAGE_KEY_VIEW_MODE, this.viewMode);
+    } catch (err) {}
+    this.scheduleCloudSync();
   }
 
   saveCourses() {
@@ -343,10 +358,16 @@ class CourseVaultApp {
         this.showToast('Could not save data to browser storage.', 'danger');
       }
     }
+    this.scheduleCloudSync();
   }
 
   saveCategories() {
-    localStorage.setItem(STORAGE_KEY_CATEGORIES, JSON.stringify(this.categories));
+    try {
+      localStorage.setItem(STORAGE_KEY_CATEGORIES, JSON.stringify(this.categories));
+    } catch (err) {
+      console.error('[CourseVault] Failed to save categories:', err);
+    }
+    this.scheduleCloudSync();
   }
 
   saveTools() {
@@ -355,6 +376,372 @@ class CourseVaultApp {
     } catch (err) {
       console.error('[CourseVault] Failed to save tools:', err);
       this.showToast('Could not save tools to browser storage.', 'danger');
+    }
+    this.scheduleCloudSync();
+  }
+
+  // ==========================================================================
+  // Firebase Auth & Cloud Firestore Sync Engine
+  // ==========================================================================
+
+  initFirebase() {
+    this.auth = window.auth || null;
+    this.db = window.db || null;
+    this.currentUser = null;
+    this.firestoreUnsubscribe = null;
+    this.syncDebounceTimer = null;
+    this.isSyncingToCloud = false;
+
+    if (!this.auth && typeof firebase !== 'undefined' && firebase.initializeApp) {
+      try {
+        if (!firebase.apps || !firebase.apps.length) {
+          firebase.initializeApp(FIREBASE_CONFIG);
+        }
+        this.auth = firebase.auth();
+        this.db = firebase.firestore();
+      } catch (err) {
+        console.warn('[CourseVault] Firebase init fallback:', err);
+      }
+    }
+
+    if (this.db) {
+      try {
+        this.db.enablePersistence({ synchronizeTabs: true }).catch((err) => {
+          if (err.code !== 'failed-precondition' && err.code !== 'unimplemented') {
+            console.warn('[CourseVault] Firestore persistence:', err.code);
+          }
+        });
+      } catch (e) {}
+    }
+  }
+
+  setupFirebaseAuth() {
+    if (!this.auth) {
+      this.updateAuthUI(null);
+      return;
+    }
+
+    // Check redirect login results (fallback for mobile popup blockers)
+    this.auth.getRedirectResult().then((result) => {
+      if (result && result.user) {
+        this.showToast(`Signed in as ${result.user.displayName || result.user.email}!`, 'success');
+      }
+    }).catch((err) => {
+      console.warn('[CourseVault Auth] Redirect error:', err);
+      if (err.code && err.code !== 'auth/popup-closed-by-user') {
+        this.showToast(`Sign in notice: ${err.message}`, 'warning');
+      }
+    });
+
+    // Listen for Auth State changes
+    this.auth.onAuthStateChanged(async (user) => {
+      this.currentUser = user;
+      this.updateAuthUI(user);
+
+      if (user) {
+        console.log('[CourseVault Auth] Signed in as:', user.email);
+        await this.handleUserSignedIn(user);
+      } else {
+        console.log('[CourseVault Auth] Signed out');
+        if (this.firestoreUnsubscribe) {
+          this.firestoreUnsubscribe();
+          this.firestoreUnsubscribe = null;
+        }
+        this.setSyncStatus('offline');
+      }
+    });
+  }
+
+  async handleUserSignedIn(user) {
+    if (!this.db || !user) return;
+    this.setSyncStatus('syncing');
+
+    try {
+      const userDocRef = this.db.collection('users').doc(user.uid);
+      const doc = await userDocRef.get();
+
+      if (doc.exists) {
+        const cloudData = doc.data();
+        console.log('[CourseVault Sync] Found existing cloud document in Firestore.');
+        this.hydrateFromCloud(cloudData, true);
+        this.setSyncStatus('synced');
+      } else {
+        // Document does not exist yet (first time login)
+        console.log('[CourseVault Sync] First time sign in: uploading local data to cloud.');
+        await this.syncToCloud();
+        this.setSyncStatus('synced');
+        this.showToast('Your courses & workspaces are now synced to the cloud!', 'success');
+      }
+
+      // Real-time listener for remote updates (cross-device sync)
+      if (this.firestoreUnsubscribe) {
+        this.firestoreUnsubscribe();
+      }
+      this.firestoreUnsubscribe = userDocRef.onSnapshot((snapshot) => {
+        if (!snapshot.exists) return;
+        if (snapshot.metadata && snapshot.metadata.hasPendingWrites) {
+          return; // Local write, already in state
+        }
+        if (this.isSyncingToCloud) {
+          return; // Outgoing write in progress
+        }
+        console.log('[CourseVault Sync] Remote real-time update received from Firestore.');
+        this.hydrateFromCloud(snapshot.data(), false);
+        this.setSyncStatus('synced');
+      }, (err) => {
+        console.warn('[CourseVault Sync] Snapshot listener note:', err);
+      });
+
+    } catch (err) {
+      console.error('[CourseVault Sync] Error on sign-in sync:', err);
+      this.setSyncStatus('error');
+    }
+  }
+
+  hydrateFromCloud(cloudData, isInitial = false) {
+    if (!cloudData) return;
+    let stateChanged = false;
+
+    // Courses
+    if (Array.isArray(cloudData.courses)) {
+      if (isInitial && this.courses.length > 0) {
+        // Merge: keep cloud courses, append any local courses not yet in cloud
+        const cloudCourseIds = new Set(cloudData.courses.map(c => c.id));
+        const uniqueLocal = this.courses.filter(c => !cloudCourseIds.has(c.id));
+        if (uniqueLocal.length > 0) {
+          this.courses = [...cloudData.courses, ...uniqueLocal];
+          this.scheduleCloudSync();
+        } else {
+          this.courses = cloudData.courses;
+        }
+      } else {
+        this.courses = cloudData.courses;
+      }
+      try {
+        localStorage.setItem(STORAGE_KEY_COURSES, JSON.stringify(this.courses));
+      } catch (e) {}
+      stateChanged = true;
+    }
+
+    // Tools
+    if (Array.isArray(cloudData.tools)) {
+      if (isInitial && this.tools.length > 0) {
+        const cloudToolIds = new Set(cloudData.tools.map(t => t.id));
+        const uniqueLocalTools = this.tools.filter(t => !cloudToolIds.has(t.id));
+        if (uniqueLocalTools.length > 0) {
+          this.tools = [...cloudData.tools, ...uniqueLocalTools];
+          this.scheduleCloudSync();
+        } else {
+          this.tools = cloudData.tools;
+        }
+      } else {
+        this.tools = cloudData.tools;
+      }
+      try {
+        localStorage.setItem(STORAGE_KEY_TOOLS, JSON.stringify(this.tools));
+      } catch (e) {}
+      stateChanged = true;
+    }
+
+    // Sections / Workspaces
+    if (Array.isArray(cloudData.sections) && cloudData.sections.length > 0) {
+      this.sections = cloudData.sections;
+      try {
+        localStorage.setItem(STORAGE_KEY_SECTIONS, JSON.stringify(this.sections));
+      } catch (e) {}
+      stateChanged = true;
+    }
+
+    // Categories
+    if (Array.isArray(cloudData.categories) && cloudData.categories.length > 0) {
+      this.categories = cloudData.categories;
+      try {
+        localStorage.setItem(STORAGE_KEY_CATEGORIES, JSON.stringify(this.categories));
+      } catch (e) {}
+      stateChanged = true;
+    }
+
+    // View Mode
+    if (cloudData.viewMode && ['grid', 'compact', 'list'].includes(cloudData.viewMode)) {
+      this.viewMode = cloudData.viewMode;
+      try {
+        localStorage.setItem(STORAGE_KEY_VIEW_MODE, this.viewMode);
+      } catch (e) {}
+    }
+
+    if (stateChanged) {
+      this.migrateDataSchema();
+      this.render();
+      console.log('[CourseVault Sync] Application state hydrated from cloud.');
+    }
+  }
+
+  scheduleCloudSync() {
+    if (!this.currentUser || !this.db) return;
+    this.setSyncStatus('syncing');
+
+    if (this.syncDebounceTimer) {
+      clearTimeout(this.syncDebounceTimer);
+    }
+    this.syncDebounceTimer = setTimeout(() => {
+      this.syncToCloud();
+    }, 1000);
+  }
+
+  async syncToCloud() {
+    if (!this.currentUser || !this.db) return;
+    this.isSyncingToCloud = true;
+    this.setSyncStatus('syncing');
+
+    try {
+      const payload = {
+        courses: this.courses,
+        tools: this.tools,
+        sections: this.sections,
+        categories: this.categories,
+        viewMode: this.viewMode,
+        clientTimestamp: Date.now(),
+        lastUpdated: (typeof firebase !== 'undefined' && firebase.firestore)
+          ? firebase.firestore.FieldValue.serverTimestamp()
+          : new Date().toISOString(),
+        userEmail: this.currentUser.email || '',
+        userName: this.currentUser.displayName || ''
+      };
+
+      await this.db.collection('users').doc(this.currentUser.uid).set(payload, { merge: true });
+      this.setSyncStatus('synced');
+      console.log('[CourseVault Sync] Saved successfully to Firestore.');
+    } catch (err) {
+      console.error('[CourseVault Sync] Failed to sync to Firestore:', err);
+      this.setSyncStatus('error');
+    } finally {
+      this.isSyncingToCloud = false;
+    }
+  }
+
+  async handleGoogleSignIn() {
+    if (!this.auth) {
+      this.showToast('Google Sign-In is unavailable (offline mode).', 'warning');
+      return;
+    }
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+
+    try {
+      this.showToast('Connecting to Google...', 'info');
+      await this.auth.signInWithPopup(provider);
+    } catch (error) {
+      console.warn('[CourseVault Auth] Popup failed or blocked:', error);
+      if (
+        error.code === 'auth/popup-blocked' ||
+        error.code === 'auth/cancelled-popup-request' ||
+        /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+      ) {
+        try {
+          console.log('[CourseVault Auth] Falling back to redirect sign-in');
+          await this.auth.signInWithRedirect(provider);
+        } catch (redirectErr) {
+          console.error('[CourseVault Auth] Redirect error:', redirectErr);
+          this.showToast(`Sign in error: ${redirectErr.message}`, 'danger');
+        }
+      } else if (error.code !== 'auth/popup-closed-by-user') {
+        this.showToast(`Sign in error: ${error.message}`, 'danger');
+      }
+    }
+  }
+
+  async handleGoogleSignOut() {
+    if (!this.auth) return;
+    try {
+      if (this.firestoreUnsubscribe) {
+        this.firestoreUnsubscribe();
+        this.firestoreUnsubscribe = null;
+      }
+      await this.auth.signOut();
+      this.showToast('Signed out of Google. Local data preserved.', 'info');
+    } catch (err) {
+      console.error('[CourseVault Auth] Sign out error:', err);
+      this.showToast('Error signing out', 'danger');
+    }
+  }
+
+  updateAuthUI(user) {
+    const loggedOutEl = document.getElementById('authLoggedOut');
+    const loggedInEl = document.getElementById('authLoggedIn');
+    const userAvatarEl = document.getElementById('authUserAvatar');
+    const userNameEl = document.getElementById('authUserName');
+    const storageInfoLabel = document.getElementById('storageInfoLabel');
+
+    if (user) {
+      if (loggedOutEl) loggedOutEl.classList.add('hidden');
+      if (loggedInEl) loggedInEl.classList.remove('hidden');
+
+      const displayName = user.displayName || user.email?.split('@')[0] || 'Learner';
+      if (userNameEl) {
+        userNameEl.textContent = displayName;
+        userNameEl.title = user.email || displayName;
+      }
+
+      if (userAvatarEl) {
+        if (user.photoURL) {
+          userAvatarEl.src = user.photoURL;
+          userAvatarEl.alt = displayName;
+          userAvatarEl.onerror = () => {
+            userAvatarEl.src = this.generateInitialsAvatar(displayName);
+          };
+        } else {
+          userAvatarEl.src = this.generateInitialsAvatar(displayName);
+          userAvatarEl.alt = displayName;
+        }
+      }
+
+      if (storageInfoLabel) {
+        storageInfoLabel.textContent = 'Cloud Sync Active';
+      }
+      this.setSyncStatus('synced');
+    } else {
+      if (loggedOutEl) loggedOutEl.classList.remove('hidden');
+      if (loggedInEl) loggedInEl.classList.add('hidden');
+
+      if (storageInfoLabel) {
+        storageInfoLabel.textContent = 'Local Storage Active';
+      }
+      this.setSyncStatus('offline');
+    }
+  }
+
+  generateInitialsAvatar(name) {
+    const initial = (name || 'U').charAt(0).toUpperCase();
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+      <rect width="64" height="64" rx="32" fill="#1A202C"/>
+      <circle cx="32" cy="32" r="30" fill="none" stroke="#C5A059" stroke-width="2"/>
+      <text x="50%" y="54%" font-family="system-ui, -apple-system, sans-serif" font-size="28" font-weight="bold" fill="#C5A059" text-anchor="middle" dominant-baseline="middle">${initial}</text>
+    </svg>`;
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+  }
+
+  setSyncStatus(status) {
+    const statusEl = document.getElementById('authSyncStatus');
+    if (!statusEl) return;
+
+    statusEl.className = 'auth-sync-status ' + status;
+    const labelEl = statusEl.querySelector('.sync-label');
+
+    if (!this.currentUser) {
+      if (labelEl) labelEl.textContent = 'Local Only';
+      return;
+    }
+
+    if (labelEl) {
+      if (status === 'syncing') {
+        labelEl.textContent = 'Syncing...';
+      } else if (status === 'synced') {
+        labelEl.textContent = 'Synced';
+      } else if (status === 'error') {
+        labelEl.textContent = 'Sync Error';
+      } else {
+        labelEl.textContent = 'Synced';
+      }
     }
   }
 
@@ -864,9 +1251,27 @@ class CourseVaultApp {
 
     // Toast Container
     this.toastStack = document.getElementById('toastStack');
+
+    // Google Auth & Cloud Sync
+    this.googleSignInBtn = document.getElementById('googleSignInBtn');
+    this.googleSignOutBtn = document.getElementById('googleSignOutBtn');
+    this.authLoggedOut = document.getElementById('authLoggedOut');
+    this.authLoggedIn = document.getElementById('authLoggedIn');
+    this.authUserAvatar = document.getElementById('authUserAvatar');
+    this.authUserName = document.getElementById('authUserName');
+    this.authSyncStatus = document.getElementById('authSyncStatus');
+    this.storageInfoLabel = document.getElementById('storageInfoLabel');
   }
 
   setupEventListeners() {
+    // Google Auth & Cloud Sync
+    if (this.googleSignInBtn) {
+      this.googleSignInBtn.addEventListener('click', () => this.handleGoogleSignIn());
+    }
+    if (this.googleSignOutBtn) {
+      this.googleSignOutBtn.addEventListener('click', () => this.handleGoogleSignOut());
+    }
+
     // Drawer
     const toggleDrawer = () => {
       const isOpen = this.sidebarChannels.classList.contains('open');

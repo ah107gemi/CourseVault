@@ -1,4 +1,4 @@
-const CACHE_NAME = 'coursevault-v2.0.1';
+const CACHE_NAME = 'coursevault-v2.1.0';
 const MEDIA_CACHE = 'coursevault-media-v1';
 const STATIC_ASSETS = [
   './',
@@ -51,6 +51,26 @@ self.addEventListener('fetch', (event) => {
           try {
             const networkResponse = await fetch(event.request);
             if (networkResponse && (networkResponse.status === 200 || networkResponse.type === 'opaque')) {
+              cache.put(event.request, networkResponse.clone());
+            }
+            return networkResponse;
+          } catch (e) {
+            const cached = await cache.match(event.request);
+            if (cached) return cached;
+            throw e;
+          }
+        }).catch(() => caches.match(event.request))
+      );
+      return;
+    }
+
+    // Firebase CDN scripts: Network first with Cache fallback for offline resilience
+    if (url.hostname.includes('gstatic.com') && url.pathname.includes('firebase')) {
+      event.respondWith(
+        caches.open(CACHE_NAME).then(async (cache) => {
+          try {
+            const networkResponse = await fetch(event.request);
+            if (networkResponse && networkResponse.status === 200) {
               cache.put(event.request, networkResponse.clone());
             }
             return networkResponse;

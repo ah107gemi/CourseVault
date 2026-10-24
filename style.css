@@ -819,11 +819,182 @@ button {
 
 .sidebar-footer {
   margin-top: auto;
-  padding-top: 1rem;
+  padding-top: 0.85rem;
   border-top: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+/* ==========================================================================
+   Account & Cloud Sync Widget (Dark-Tech Champagne Gold)
+   ========================================================================== */
+
+.sidebar-auth-widget {
+  background-color: #12161C;
+  border: 1px solid #262E3B;
+  border-radius: var(--radius-md);
+  padding: 0.5rem;
+  margin-bottom: 0.25rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sidebar-auth-widget:hover {
+  border-color: rgba(197, 160, 89, 0.4);
+}
+
+.btn-google-auth {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  background-color: #161C24;
+  color: #F8FAFC;
+  border: 1px solid #262E3B;
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 0.85rem;
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 44px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  touch-action: manipulation;
+  box-sizing: border-box;
+}
+
+.btn-google-auth:hover {
+  background-color: rgba(197, 160, 89, 0.1);
+  border-color: #C5A059;
+  color: #E5C07B;
+  box-shadow: 0 2px 10px rgba(197, 160, 89, 0.2);
+}
+
+.btn-google-auth:active {
+  transform: scale(0.98);
+}
+
+.google-icon {
+  flex-shrink: 0;
+}
+
+/* Logged In State */
+.auth-logged-in {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  min-height: 44px;
+  padding: 0.15rem 0.25rem;
+}
+
+.auth-user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.auth-avatar {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  border-radius: 50%;
+  border: 1.5px solid #C5A059;
+  object-fit: cover;
+  background-color: #1A202C;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  flex-shrink: 0;
+}
+
+.auth-user-details {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.15rem;
+}
+
+.auth-user-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #F8FAFC;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.auth-sync-status {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.sync-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #10B981; /* Green default */
+  flex-shrink: 0;
+  transition: background-color 0.25s ease;
+}
+
+.auth-sync-status.syncing .sync-dot {
+  background-color: #F59E0B; /* Amber pulsating */
+  animation: syncPulse 0.9s infinite alternate ease-in-out;
+}
+
+.auth-sync-status.syncing .sync-label {
+  color: #E5C07B;
+}
+
+.auth-sync-status.error .sync-dot {
+  background-color: #EF4444;
+}
+
+.auth-sync-status.offline .sync-dot {
+  background-color: #64748B;
+}
+
+@keyframes syncPulse {
+  0% { opacity: 0.35; transform: scale(0.85); }
+  100% { opacity: 1; transform: scale(1.2); }
+}
+
+.icon-btn-auth-signout {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  padding: 0;
+  touch-action: manipulation;
+}
+
+.icon-btn-auth-signout:hover {
+  background-color: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #EF4444;
+}
+
+.icon-btn-auth-signout:active {
+  transform: scale(0.95);
 }
 
 .storage-info {
