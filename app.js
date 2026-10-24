@@ -658,10 +658,127 @@ class CourseVaultApp {
         this.firestoreUnsubscribe = null;
       }
       await this.auth.signOut();
-      this.showToast('Signed out of Google. Local data preserved.', 'info');
+      this.showToast('Signed out. Local data preserved.', 'info');
     } catch (err) {
       console.error('[CourseVault Auth] Sign out error:', err);
       this.showToast('Error signing out', 'danger');
+    }
+  }
+
+  // ==========================================================================
+  // Username & PIN Authentication Methods
+  // ==========================================================================
+
+  openPinAuthModal() {
+    if (this.pinAuthModalOverlay) {
+      this.pinAuthModalOverlay.classList.remove('hidden');
+    }
+    if (this.pinAuthFeedback) {
+      this.pinAuthFeedback.classList.add('hidden');
+      this.pinAuthFeedback.textContent = '';
+    }
+    if (this.pinAuthForm) {
+      this.pinAuthForm.reset();
+    }
+    if (this.pinAuthUsername) {
+      setTimeout(() => this.pinAuthUsername.focus(), 150);
+    }
+  }
+
+  closePinAuthModal() {
+    if (this.pinAuthModalOverlay) {
+      this.pinAuthModalOverlay.classList.add('hidden');
+    }
+    if (this.pinAuthFeedback) {
+      this.pinAuthFeedback.classList.add('hidden');
+      this.pinAuthFeedback.textContent = '';
+    }
+  }
+
+  showPinAuthError(message) {
+    if (!this.pinAuthFeedback) {
+      this.showToast(message, 'danger');
+      return;
+    }
+    this.pinAuthFeedback.textContent = message;
+    this.pinAuthFeedback.classList.remove('hidden');
+  }
+
+  async submitPinAuth(mode = 'signin') {
+    if (!this.auth) {
+      this.showPinAuthError('Firebase Authentication is offline or unavailable.');
+      return;
+    }
+
+    const rawUser = this.pinAuthUsername ? this.pinAuthUsername.value : '';
+    const cleanUser = rawUser.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    if (!cleanUser) {
+      this.showPinAuthError('Please enter a valid username (letters and numbers only).');
+      if (this.pinAuthUsername) this.pinAuthUsername.focus();
+      return;
+    }
+
+    const rawPin = this.pinAuthPin ? this.pinAuthPin.value : '';
+    const pin = rawPin.trim();
+
+    if (!pin || pin.length < 4) {
+      this.showPinAuthError('Please enter a PIN with at least 4 digits.');
+      if (this.pinAuthPin) this.pinAuthPin.focus();
+      return;
+    }
+
+    // Map internally for Firebase security and compliance
+    const syntheticEmail = `${cleanUser}@coursevault.internal`;
+    const syntheticPassword = `${pin}__vault`;
+
+    // Clear previous feedback
+    if (this.pinAuthFeedback) {
+      this.pinAuthFeedback.classList.add('hidden');
+      this.pinAuthFeedback.textContent = '';
+    }
+
+    if (mode === 'signin') {
+      try {
+        this.showToast(`Signing in as ${cleanUser}...`, 'info');
+        await this.auth.signInWithEmailAndPassword(syntheticEmail, syntheticPassword);
+        this.closePinAuthModal();
+        this.showToast(`Welcome back, ${cleanUser}!`, 'success');
+      } catch (error) {
+        console.warn('[CourseVault Auth] PIN Sign In error:', error);
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+          this.showPinAuthError('Username not found or incorrect PIN. If this is your first time, click "Create Account".');
+        } else if (error.code === 'auth/wrong-password') {
+          this.showPinAuthError('Incorrect PIN for this username.');
+        } else if (error.code === 'auth/too-many-requests') {
+          this.showPinAuthError('Too many failed attempts. Please try again later.');
+        } else {
+          this.showPinAuthError(error.message || 'Authentication failed.');
+        }
+      }
+    } else if (mode === 'create') {
+      try {
+        this.showToast(`Creating account for ${cleanUser}...`, 'info');
+        const userCredential = await this.auth.createUserWithEmailAndPassword(syntheticEmail, syntheticPassword);
+        if (userCredential && userCredential.user) {
+          try {
+            await userCredential.user.updateProfile({ displayName: cleanUser });
+          } catch (pErr) {}
+          // Automatically sync existing local items to Firestore users/{user.uid}
+          await this.syncToCloud();
+        }
+        this.closePinAuthModal();
+        this.showToast(`Account created for ${cleanUser}! Synced to cloud.`, 'success');
+      } catch (error) {
+        console.warn('[CourseVault Auth] PIN Create Account error:', error);
+        if (error.code === 'auth/email-already-in-use') {
+          this.showPinAuthError(`Username "${cleanUser}" is already registered. Please Sign In with your PIN or choose another username.`);
+        } else if (error.code === 'auth/weak-password') {
+          this.showPinAuthError('PIN is too short. Please use at least 4 digits.');
+        } else {
+          this.showPinAuthError(error.message || 'Account creation failed.');
+        }
+      }
     }
   }
 
@@ -676,10 +793,19 @@ class CourseVaultApp {
       if (loggedOutEl) loggedOutEl.classList.add('hidden');
       if (loggedInEl) loggedInEl.classList.remove('hidden');
 
-      const displayName = user.displayName || user.email?.split('@')[0] || 'Learner';
+      let displayName = user.displayName;
+      if (!displayName && user.email) {
+        if (user.email.endsWith('@coursevault.internal')) {
+          displayName = user.email.replace('@coursevault.internal', '');
+        } else {
+          displayName = user.email.split('@')[0];
+        }
+      }
+      if (!displayName) displayName = 'Learner';
+
       if (userNameEl) {
         userNameEl.textContent = displayName;
-        userNameEl.title = user.email || displayName;
+        userNameEl.title = user.email ? (user.email.endsWith('@coursevault.internal') ? `@${displayName}` : user.email) : displayName;
       }
 
       if (userAvatarEl) {
@@ -1261,6 +1387,17 @@ class CourseVaultApp {
     this.authUserName = document.getElementById('authUserName');
     this.authSyncStatus = document.getElementById('authSyncStatus');
     this.storageInfoLabel = document.getElementById('storageInfoLabel');
+
+    // Username & PIN Auth Modal
+    this.openPinAuthModalBtn = document.getElementById('openPinAuthModalBtn');
+    this.closePinAuthModalBtn = document.getElementById('closePinAuthModalBtn');
+    this.pinAuthModalOverlay = document.getElementById('pinAuthModalOverlay');
+    this.pinAuthForm = document.getElementById('pinAuthForm');
+    this.pinAuthUsername = document.getElementById('pinAuthUsername');
+    this.pinAuthPin = document.getElementById('pinAuthPin');
+    this.pinSignInBtn = document.getElementById('pinSignInBtn');
+    this.pinCreateAccountBtn = document.getElementById('pinCreateAccountBtn');
+    this.pinAuthFeedback = document.getElementById('pinAuthFeedback');
   }
 
   setupEventListeners() {
@@ -1270,6 +1407,29 @@ class CourseVaultApp {
     }
     if (this.googleSignOutBtn) {
       this.googleSignOutBtn.addEventListener('click', () => this.handleGoogleSignOut());
+    }
+
+    // Username & PIN Auth
+    if (this.openPinAuthModalBtn) {
+      this.openPinAuthModalBtn.addEventListener('click', () => {
+        this.closeDrawer();
+        this.openPinAuthModal();
+      });
+    }
+    if (this.closePinAuthModalBtn) {
+      this.closePinAuthModalBtn.addEventListener('click', () => this.closePinAuthModal());
+    }
+    if (this.pinAuthForm) {
+      this.pinAuthForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        this.submitPinAuth('signin');
+      });
+    }
+    if (this.pinCreateAccountBtn) {
+      this.pinCreateAccountBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.submitPinAuth('create');
+      });
     }
 
     // Drawer

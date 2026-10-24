@@ -880,6 +880,63 @@ button {
   flex-shrink: 0;
 }
 
+.btn-pin-auth-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  background-color: transparent;
+  color: var(--text-muted);
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 0.85rem;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 40px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  margin-top: 0.4rem;
+  touch-action: manipulation;
+  box-sizing: border-box;
+}
+
+.btn-pin-auth-trigger:hover {
+  background-color: rgba(197, 160, 89, 0.08);
+  border-color: rgba(197, 160, 89, 0.4);
+  color: #E5C07B;
+}
+
+.btn-pin-auth-trigger:active {
+  transform: scale(0.98);
+}
+
+.pin-auth-lead {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+  margin-bottom: 0.5rem;
+}
+
+.pin-auth-feedback {
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  margin-top: 0.25rem;
+  background-color: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #FCA5A5;
+}
+
+.pin-auth-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+}
+
 /* Logged In State */
 .auth-logged-in {
   display: flex;
