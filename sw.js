@@ -1,4 +1,4 @@
-const CACHE_NAME = 'coursevault-v2.5.0';
+const CACHE_NAME = 'coursevault-v2.6.0';
 const MEDIA_CACHE = 'coursevault-media-v1';
 const STATIC_ASSETS = [
   './',

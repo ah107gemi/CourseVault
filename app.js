@@ -1197,7 +1197,7 @@ class CourseVaultApp {
 
   bindDomElements() {
     // Header & Navigation
-    this.mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    this.mobileMenuBtn = document.getElementById('mobileMenuBtn') || document.getElementById('mobile-menu-btn');
     this.sidebarChannels = document.getElementById('sidebarChannels');
     this.drawerBackdrop = document.getElementById('drawerBackdrop');
     this.searchInput = document.getElementById('searchInput');
@@ -1212,7 +1212,7 @@ class CourseVaultApp {
     this.openAddWorkspaceBtn = document.getElementById('openAddWorkspaceBtn');
 
     // Mobile Bottom Bar
-    this.bottomNavMenuBtn = document.getElementById('bottomNavMenuBtn');
+    this.bottomNavMenuBtn = document.getElementById('bottomNavMenuBtn') || document.getElementById('mobile-menu-btn') || document.getElementById('menu-btn');
     this.mobileFabAddBtn = document.getElementById('mobileFabAddBtn');
     this.mobileNavBackupBtn = document.getElementById('mobileNavBackupBtn');
 
@@ -1433,16 +1433,41 @@ class CourseVaultApp {
       });
     }
 
-    // Drawer
-    const toggleDrawer = () => {
-      const isOpen = this.sidebarChannels.classList.contains('open');
-      if (isOpen) this.closeDrawer();
-      else this.openDrawer();
+    // Drawer Toggle Engine
+    const toggleDrawer = (e) => {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      if (!this.sidebarChannels) return;
+      const isOpen = this.sidebarChannels.classList.contains('open') || this.sidebarChannels.classList.contains('mobile-open');
+      if (isOpen) {
+        this.closeDrawer();
+      } else {
+        this.openDrawer();
+      }
     };
 
-    if (this.mobileMenuBtn) this.mobileMenuBtn.addEventListener('click', toggleDrawer);
-    if (this.bottomNavMenuBtn) this.bottomNavMenuBtn.addEventListener('click', toggleDrawer);
-    if (this.drawerBackdrop) this.drawerBackdrop.addEventListener('click', () => this.closeDrawer());
+    const menuTriggers = [
+      this.bottomNavMenuBtn,
+      this.mobileMenuBtn,
+      document.getElementById('bottomNavMenuBtn'),
+      document.getElementById('mobileMenuBtn'),
+      document.getElementById('mobile-menu-btn'),
+      document.getElementById('menu-btn'),
+      ...document.querySelectorAll('.mobile-menu-btn, .mobile-menu-toggle, [data-action="toggle-menu"]')
+    ].filter(Boolean);
+
+    Array.from(new Set(menuTriggers)).forEach(btn => {
+      btn.addEventListener('click', toggleDrawer);
+    });
+
+    if (this.drawerBackdrop) {
+      this.drawerBackdrop.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.closeDrawer();
+      });
+    }
 
     // View Mode Switcher
     if (this.viewModeSwitcher) {
@@ -1758,11 +1783,13 @@ class CourseVaultApp {
         this.activeCategoryFilter = 'all';
         this.activeStatusFilter = 'all';
         this.searchQuery = '';
-        this.searchInput.value = '';
-        this.clearSearchBtn.classList.add('hidden');
-        this.statusTabsContainer.querySelectorAll('.status-tab').forEach(t => {
-          t.classList.toggle('active', t.dataset.tabStatus === 'all');
-        });
+        if (this.searchInput) this.searchInput.value = '';
+        if (this.clearSearchBtn) this.clearSearchBtn.classList.add('hidden');
+        if (this.statusTabsContainer) {
+          this.statusTabsContainer.querySelectorAll('.status-tab').forEach(t => {
+            t.classList.toggle('active', t.dataset.tabStatus === 'all');
+          });
+        }
         this.render();
       });
     }
@@ -1776,13 +1803,29 @@ class CourseVaultApp {
   }
 
   openDrawer() {
-    this.sidebarChannels.classList.add('open');
-    this.drawerBackdrop.classList.add('active');
+    if (this.sidebarChannels) {
+      this.sidebarChannels.classList.add('open');
+      this.sidebarChannels.classList.add('mobile-open');
+    }
+    if (this.drawerBackdrop) {
+      this.drawerBackdrop.classList.add('active');
+      this.drawerBackdrop.classList.add('open');
+      this.drawerBackdrop.classList.remove('hidden');
+    }
+    document.body.classList.add('drawer-open');
   }
 
   closeDrawer() {
-    this.sidebarChannels.classList.remove('open');
-    this.drawerBackdrop.classList.remove('active');
+    if (this.sidebarChannels) {
+      this.sidebarChannels.classList.remove('open');
+      this.sidebarChannels.classList.remove('mobile-open');
+    }
+    if (this.drawerBackdrop) {
+      this.drawerBackdrop.classList.remove('active');
+      this.drawerBackdrop.classList.remove('open');
+      this.drawerBackdrop.classList.add('hidden');
+    }
+    document.body.classList.remove('drawer-open');
   }
 
   // ==========================================================================

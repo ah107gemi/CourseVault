@@ -2455,6 +2455,15 @@ button {
   box-sizing: border-box;
 }
 
+.modal-overlay.hidden,
+.modal-overlay[hidden] {
+  display: none !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  z-index: -1 !important;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -3615,25 +3624,33 @@ button {
     padding-bottom: calc(var(--safe-bottom) + 1rem);
   }
 
-  .sidebar-channels.open {
-    transform: translateX(0);
+  .sidebar-channels.open,
+  .sidebar-channels.mobile-open,
+  aside.sidebar-channels.open,
+  aside.sidebar-channels.mobile-open {
+    transform: translateX(0) !important;
   }
 
   .drawer-backdrop {
-    display: block;
+    display: none !important;
     position: fixed;
     inset: 0;
     background-color: var(--bg-overlay);
     backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     z-index: 140;
     opacity: 0;
-    pointer-events: none;
+    pointer-events: none !important;
+    visibility: hidden !important;
     transition: opacity 0.25s ease;
   }
 
-  .drawer-backdrop.active {
-    opacity: 1;
-    pointer-events: auto;
+  .drawer-backdrop.active,
+  .drawer-backdrop.open {
+    display: block !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    visibility: visible !important;
   }
 
   .main-content {
@@ -3653,8 +3670,9 @@ button {
     padding-bottom: var(--safe-bottom);
     background-color: var(--bg-surface);
     border-top: 1px solid var(--border-subtle);
-    z-index: 90;
+    z-index: 160 !important;
     box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.4);
+    pointer-events: auto !important;
   }
 
   .bottom-nav-item {
@@ -3672,6 +3690,13 @@ button {
     background: transparent;
     border: none;
     cursor: pointer;
+    pointer-events: auto !important;
+    touch-action: manipulation !important;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .bottom-nav-item * {
+    pointer-events: none !important;
   }
 
   .bottom-nav-item:hover, .bottom-nav-item:active, .bottom-nav-item.active {
