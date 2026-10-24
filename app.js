@@ -1538,6 +1538,16 @@ class CourseVaultApp {
       this.lectureModalAddForm.addEventListener('submit', (e) => this.handleSingleLectureAdd(e));
     }
 
+    // Auto-scroll lecture inputs into view when focused (above mobile virtual keyboard)
+    [this.newLectureTitle, this.newLectureLink, this.newLectureNotes, this.batchLectureCountInput].forEach(inputEl => {
+      if (!inputEl) return;
+      inputEl.addEventListener('focus', () => {
+        setTimeout(() => {
+          inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 150);
+      });
+    });
+
     // Search
     const executeSearch = (val) => {
       this.searchQuery = val.trim().toLowerCase();
@@ -3260,7 +3270,21 @@ class CourseVaultApp {
         const saveBtn = card.querySelector('.save-inline-edit-btn');
         const cancelBtn = card.querySelector('.cancel-inline-edit-btn');
 
-        if (titleInput) setTimeout(() => titleInput.focus(), 50);
+        // Auto-scroll into view on focus above virtual keyboard
+        [titleInput, linkInput, notesInput].forEach(inputEl => {
+          if (!inputEl) return;
+          inputEl.addEventListener('focus', () => {
+            setTimeout(() => {
+              inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 150);
+          });
+        });
+
+        if (titleInput) {
+          setTimeout(() => {
+            titleInput.focus();
+          }, 50);
+        }
 
         cancelBtn.addEventListener('click', (e) => {
           e.preventDefault();
