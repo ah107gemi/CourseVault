@@ -1,4 +1,4 @@
-const CACHE_NAME = 'coursevault-v2.0.0';
+const CACHE_NAME = 'coursevault-v2.0.1';
 const MEDIA_CACHE = 'coursevault-media-v1';
 const STATIC_ASSETS = [
   './',
@@ -6,6 +6,7 @@ const STATIC_ASSETS = [
   './style.css',
   './app.js',
   './manifest.json',
+  './favicon.ico',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon.svg'
