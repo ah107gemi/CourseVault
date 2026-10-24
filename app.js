@@ -13,14 +13,15 @@ const STORAGE_KEY_TOOLS = 'coursevault_tools_v1';
 const STORAGE_KEY_SECTIONS = 'coursevault_sections_v2';
 const STORAGE_KEY_VIEW_MODE = 'coursevault_view_mode_v2';
 
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyAlLNBkVugbmUC8zNn2LBWrPXAq03QZOKQ",
+const firebaseConfig = {
+  apiKey: "AIzaSyALlN8kVugbmUC8zNn2LBWrPXAqO3QZOKQ",
   authDomain: "coursevault-36c69.firebaseapp.com",
   projectId: "coursevault-36c69",
   storageBucket: "coursevault-36c69.firebasestorage.app",
   messagingSenderId: "784597420212",
   appId: "1:784597420212:web:2bf91a1ea62fe811912fe1"
 };
+const FIREBASE_CONFIG = firebaseConfig;
 
 const DEFAULT_SECTIONS = [
   {
