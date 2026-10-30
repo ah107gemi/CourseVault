@@ -192,7 +192,7 @@ class CourseVaultApp {
   constructor() {
     this.sections = [];
     this.activeSectionId = 'courses';
-    this.viewMode = 'grid'; // 'grid' | 'compact' | 'list'
+    this.viewMode = 'grid'; // 'grid' | 'compact'
     this.courses = [];
     this.categories = [];
     this.tools = [];
@@ -240,8 +240,10 @@ class CourseVaultApp {
 
       // 2. View Mode
       const storedViewMode = localStorage.getItem(STORAGE_KEY_VIEW_MODE);
-      if (storedViewMode && ['grid', 'compact', 'list'].includes(storedViewMode)) {
+      if (storedViewMode && ['grid', 'compact'].includes(storedViewMode)) {
         this.viewMode = storedViewMode;
+      } else {
+        this.viewMode = 'grid';
       }
 
       // 3. Categories
@@ -565,7 +567,7 @@ class CourseVaultApp {
     }
 
     // View Mode
-    if (cloudData.viewMode && ['grid', 'compact', 'list'].includes(cloudData.viewMode)) {
+    if (cloudData.viewMode && ['grid', 'compact'].includes(cloudData.viewMode)) {
       this.viewMode = cloudData.viewMode;
       try {
         localStorage.setItem(STORAGE_KEY_VIEW_MODE, this.viewMode);
@@ -2197,7 +2199,7 @@ class CourseVaultApp {
   // ==========================================================================
 
   setViewMode(mode) {
-    if (!['grid', 'compact', 'list'].includes(mode)) return;
+    if (!['grid', 'compact'].includes(mode)) mode = 'grid';
     this.viewMode = mode;
     this.saveViewMode();
 
@@ -3944,51 +3946,15 @@ class CourseVaultApp {
       `;
     }
 
-    // LIST VIEW ROW MARKUP
-    const listRowHtml = `
-      <div class="list-row-main">
-        ${thumbnailHtml}
-        <div class="list-info-col">
-          <div class="list-title-row">
-            <h3 class="card-title" title="${escapeHtml(course.title)}">${escapeHtml(course.title)}</h3>
-          </div>
-          <div class="list-meta-row">
-            <span class="category-tag" style="--cat-color: ${catColor};"># ${escapeHtml(course.category)}</span>
-            <span class="card-date">${dateFormatted}</span>
-          </div>
-        </div>
-
-        <div class="list-progress-col">
-          <div class="progress-header">
-            <span>${progress.hasLectures ? `${progress.done}/${progress.total} done` : 'Progress'}</span>
-            <span class="progress-pct-badge">${progress.pct}%</span>
-          </div>
-          <div class="progress-bar-track">
-            <div class="progress-bar-fill" style="width: ${progress.pct}%;"></div>
-          </div>
-        </div>
-
-        <div class="list-actions-col">
-          <a href="${escapeHtml(course.url)}" target="_blank" rel="noopener noreferrer" class="btn-watch-yt">
-            <span>Watch</span>
-          </a>
-          <div class="card-actions-group">
-            <button type="button" class="card-icon-action manage-lectures-btn ${progress.hasLectures ? 'has-lectures' : ''}" title="Curriculum & Lectures" aria-label="Curriculum & Lectures">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-            </button>
-            <button type="button" class="card-icon-action edit-course-btn" title="Edit course & lectures" aria-label="Edit course">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-            </button>
-            <button type="button" class="card-icon-action delete-action delete-course-btn" title="Delete course" aria-label="Delete course">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-            </button>
-          </div>
+    // Expandable Description / Notes Drawer (hidden by default, toggled via Eye icon)
+    const descText = (course.notes || course.description || '').trim();
+    const descriptionDrawerHtml = `
+      <div class="card-description-drawer">
+        <div class="card-description-inner">
+          ${descText ? escapeHtml(descText) : '<span class="empty-desc-hint" style="font-style: italic; opacity: 0.65;">No description provided.</span>'}
         </div>
       </div>
     `;
-
-    // GRID & COMPACT CARD CONTENT MARKUP
-    const notesHtml = course.notes ? `<div class="card-notes">${escapeHtml(course.notes)}</div>` : '';
 
     const gridContentHtml = `
       <div class="card-content">
@@ -4000,7 +3966,7 @@ class CourseVaultApp {
         </div>
 
         <h3 class="card-title" title="${escapeHtml(course.title)}">${escapeHtml(course.title)}</h3>
-        ${notesHtml}
+        ${descriptionDrawerHtml}
 
         <!-- Dynamic Course Progress Bar -->
         <div class="course-progress-wrap">
@@ -4028,25 +3994,29 @@ class CourseVaultApp {
 
         <!-- Footer Actions (Aligned row, no overlap) -->
         <div class="card-actions-footer">
-          <a href="${escapeHtml(course.url)}" target="_blank" rel="noopener noreferrer" class="btn-watch-yt">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-            <span>Watch on YouTube</span>
+          <a href="${escapeHtml(course.url)}" target="_blank" rel="noopener noreferrer" class="btn-watch-yt" title="Open Link">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+            <span>Open Link</span>
           </a>
 
           <div class="card-actions-group">
+            <button type="button" class="card-icon-action toggle-description-btn" title="View Description" aria-label="View Description">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            </button>
+
             <button type="button" class="card-icon-action manage-lectures-btn ${progress.hasLectures ? 'has-lectures' : ''}" title="Curriculum & Lectures" aria-label="Curriculum & Lectures">
               <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
             </button>
 
-            <button class="card-icon-action copy-link-btn" title="Copy clean link" aria-label="Copy course link">
+            <button type="button" class="card-icon-action copy-link-btn" title="Copy clean link" aria-label="Copy course link">
               <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
             </button>
 
-            <button class="card-icon-action edit-course-btn" title="Edit course & lectures" aria-label="Edit course">
+            <button type="button" class="card-icon-action edit-course-btn" title="Edit course & lectures" aria-label="Edit course">
               <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
             </button>
 
-            <button class="card-icon-action delete-action delete-course-btn" title="Delete course" aria-label="Delete course">
+            <button type="button" class="card-icon-action delete-action delete-course-btn" title="Delete course" aria-label="Delete course">
               <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
             </button>
           </div>
@@ -4059,7 +4029,6 @@ class CourseVaultApp {
         ${thumbnailHtml}
         ${gridContentHtml}
       </div>
-      ${listRowHtml}
     `;
 
     // Event Listeners on Card
@@ -4079,6 +4048,17 @@ class CourseVaultApp {
       });
     });
 
+    // Toggle description (Eye button)
+    const toggleDescBtn = card.querySelector('.toggle-description-btn');
+    if (toggleDescBtn) {
+      toggleDescBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const isOpen = card.classList.toggle('show-description');
+        toggleDescBtn.classList.toggle('active', isOpen);
+      });
+    }
+
     // Copy clean link
     const copyBtn = card.querySelector('.copy-link-btn');
     if (copyBtn) {
@@ -4093,23 +4073,26 @@ class CourseVaultApp {
     }
 
     // Manage Lectures directly from card
-    card.querySelectorAll('.manage-lectures-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+    const manageLecturesBtn = card.querySelector('.manage-lectures-btn');
+    if (manageLecturesBtn) {
+      manageLecturesBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
         this.openLectureModal(course.id);
       });
-    });
+    }
 
     // Edit button
-    card.querySelectorAll('.edit-course-btn').forEach(btn => {
-      btn.addEventListener('click', () => this.openCourseModal(course));
-    });
+    const editBtn = card.querySelector('.edit-course-btn');
+    if (editBtn) {
+      editBtn.addEventListener('click', () => this.openCourseModal(course));
+    }
 
     // Delete button
-    card.querySelectorAll('.delete-course-btn').forEach(btn => {
-      btn.addEventListener('click', () => this.confirmDelete(course.id));
-    });
+    const deleteBtn = card.querySelector('.delete-course-btn');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', () => this.confirmDelete(course.id));
+    }
 
     return card;
   }
@@ -4265,7 +4248,7 @@ class CourseVaultApp {
           this.saveTools();
         }
 
-        if (data.viewMode && ['grid', 'compact', 'list'].includes(data.viewMode)) {
+        if (data.viewMode && ['grid', 'compact'].includes(data.viewMode)) {
           this.viewMode = data.viewMode;
           this.saveViewMode();
         }
